@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  THERAPIST
+  CHIEF_THERAPIST
+  PATIENT
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELED
+}
+
+enum RequestStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  role         Role     @default(PATIENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  refreshToken String?
+
+  therapist    Therapist?
+  patient      Patient?
+  transactions Transaction[] @relation("CreatedByUser")
+  auditLogs    AuditLog[]
+}
+
+model Therapist {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  email       String    @unique
+  hourlyRate  Decimal   @default(0) @db.Decimal(10, 2)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  rooms       Room[]    @relation("TherapistRooms")
+  sessions    Session[]
+  finance     Finance[]
+  patients    Patient[]
+}
+
+model Patient {
+  id                Int        @id @default(autoincrement())
+  userId            Int?       @unique
+  user              User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  firstName         String
+  lastName          String
+  nickname          String?
+  birthDate         DateTime?
+  phone             String?
+  diagnosis         String?
+  notes             String?
+  sessionPrice      Decimal    @default(0) @db.Decimal(10, 2)
+  accountBalance    Decimal    @default(0) @db.Decimal(10, 2)
+  remainingSessions Int        @default(0)
+  isActive          Boolean    @default(true)
+  isMilitary        Boolean    @default(false)
+  nationalId        String?
+  insuranceHolder   String?
+  medicalFileNumber String?
+  militaryPost      String?
+  therapistId       Int?
+  therapist         Therapist? @relation(fields: [therapistId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  sessions         Session[]
+  transactions     Transaction[]
+  evaluations      Evaluation[]
+  militaryRequests MilitaryRequest[]
+}
+
+model Room {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  therapists Therapist[] @relation("TherapistRooms")
+  sessions   Session[]
+}
+
+model Session {
+  id            Int           @id @default(autoincrement())
+  patientId     Int
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  therapistId   Int
+  therapist     Therapist     @relation(fields: [therapistId], references: [id])
+  roomId        Int?
+  room          Room?         @relation(fields: [roomId], references: [id])
+  date          DateTime
+  startTime     String
+  duration      Int           // minutes
+  status        SessionStatus @default(SCHEDULED)
+  treatmentType String?
+  isPaid        Boolean       @default(false)
+  report        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  finance Finance?
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  amount      Decimal  @db.Decimal(10, 2)
+  type        String   // PAYMENT, REFUND, ADJUSTMENT
+  note        String?
+  createdById Int
+  createdBy   User     @relation("CreatedByUser", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Evaluation {
+  id              Int      @id @default(autoincrement())
+  patientId       Int
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  date            DateTime
+  content         String
+  therapyProposal String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MilitaryRequest {
+  id            Int           @id @default(autoincrement())
+  patientId     Int
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  requestNumber String
+  status        RequestStatus @default(PENDING)
+  totalSessions Int           @default(0)
+  usedSessions  Int           @default(0)
+  validFrom     DateTime
+  validUntil    DateTime
+  note          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Finance {
+  id               Int       @id @default(autoincrement())
+  sessionId        Int       @unique
+  session          Session   @relation(fields: [sessionId], references: [id])
+  therapistId      Int
+  therapist        Therapist @relation(fields: [therapistId], references: [id])
+  therapistEarning Decimal   @db.Decimal(10, 2)
+  companyIncome    Decimal   @db.Decimal(10, 2)
+  createdAt        DateTime  @default(now())
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  Int?
+  oldValue  Json?
+  newValue  Json?
+  createdAt DateTime @default(now())
+}
