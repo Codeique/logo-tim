@@ -1,54 +1,18 @@
-version: '3.9'
+version: "3.9"
 
 services:
   db:
     image: postgres:16-alpine
     container_name: logotim-db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: logotim
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: logotim-backend
-    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://postgres:password@db:5432/logotim
-      JWT_SECRET: super-secret-jwt-key-change-in-production-min-32-chars
-      JWT_REFRESH_SECRET: super-secret-refresh-key-change-in-production-min-32-chars
-      PORT: 3001
-      NODE_ENV: production
-      FRONTEND_URL: http://localhost
-    ports:
-      - "3001:3001"
-    depends_on:
-      db:
-        condition: service_healthy
-    command: sh -c "npx prisma db push && node src/index.js"
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: logotim-frontend
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: logotim
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  pgdata:

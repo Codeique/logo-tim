@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(npx prisma *)",
+      "Bash(node_modules/.bin/prisma generate *)",
+      "Bash(node node_modules/prisma/build/index.js generate)",
+      "Bash(node -e 'const prisma = require\\('\\\\''./src/lib/prisma'\\\\''\\); console.log\\('\\\\''prisma OK:'\\\\'', typeof prisma.user\\); prisma.$disconnect\\(\\);')",
+      "Bash(node src/index.js)",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"admin@test.com\\\\\",\\\\\"password\\\\\":\\\\\"123456\\\\\"}\")",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3001)",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill *)",
+      "Bash(cmd *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(powershell -Command \"Stop-Process -Id 8960 -Force\")",
+      "Bash(find C:/Users/localUser/Documents/projects/logo-tim/backend/src -name \"*.js\" -delete)",
+      "Bash(npm test *)"
+    ]
+  }
+}
