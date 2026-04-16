@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -16,6 +16,8 @@ import {
   Alert,
   useMediaQuery,
   useTheme,
+  ThemeProvider,
+  CssBaseline,
 } from '@mui/material';
 import {
   Visibility,
@@ -26,6 +28,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import api from '../api/axios';
 import useAuthStore from '../store/authStore';
+import getTheme from '../theme';
 import loginImg from '../assets/images/loginImg.jpg';
 
 /* ─── Logo SVG ─────────────────────────────────────────────────────────────── */
@@ -206,11 +209,9 @@ function LoginForm({ onSuccess }) {
                 borderRadius: '10px',
                 fontSize: '0.9rem',
                 backgroundColor: 'rgba(0,0,0,0.02)',
-                transition: 'box-shadow 0.2s',
                 '&:hover': { backgroundColor: 'rgba(0,0,0,0.03)' },
                 '&.Mui-focused': {
                   backgroundColor: '#fff',
-                  boxShadow: '0 0 0 3px rgba(37,99,235,0.12)',
                 },
               },
             }}
@@ -258,11 +259,9 @@ function LoginForm({ onSuccess }) {
                 borderRadius: '10px',
                 fontSize: '0.9rem',
                 backgroundColor: 'rgba(0,0,0,0.02)',
-                transition: 'box-shadow 0.2s',
                 '&:hover': { backgroundColor: 'rgba(0,0,0,0.03)' },
                 '&.Mui-focused': {
                   backgroundColor: '#fff',
-                  boxShadow: '0 0 0 3px rgba(37,99,235,0.12)',
                 },
               },
             }}
@@ -430,129 +429,131 @@ function HeroPanel() {
 
 /* ─── Page Root ─────────────────────────────────────────────────────────────── */
 export default function LoginPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const lightTheme = useMemo(() => getTheme('light'), []);
+  const isMobile = useMediaQuery(lightTheme.breakpoints.down('md'));
 
-  if (isMobile) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100dvh',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Full-page background image on mobile */}
-        <Box
-          component="img"
-          src={loginImg}
-          alt=""
-          sx={{
-            position: 'fixed',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center top',
-            zIndex: 0,
-          }}
-        />
+  return (
+    <ThemeProvider theme={lightTheme}>
+      <CssBaseline />
+      {isMobile ? (
         <Box
           sx={{
-            position: 'fixed',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(15,23,42,0.45) 0%, rgba(15,23,42,0.7) 100%)',
-            zIndex: 1,
-          }}
-        />
-
-        {/* Hero text top */}
-        <Box
-          sx={{
+            minHeight: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
             position: 'relative',
-            zIndex: 2,
-            pt: 6,
-            px: 4,
-            pb: 2,
-          }}
-        >
-          <Typography
-            variant="h4"
-            sx={{
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: '1.8rem',
-              lineHeight: 1.2,
-              mb: 1,
-              textShadow: '0 2px 10px rgba(0,0,0,0.3)',
-            }}
-          >
-            Dobrodošli u naš centar
-          </Typography>
-          <Typography
-            sx={{
-              color: 'rgba(255,255,255,0.85)',
-              fontSize: '0.95rem',
-              textShadow: '0 1px 6px rgba(0,0,0,0.25)',
-            }}
-          >
-            Profesionalna logopedska pomoć za sve uzraste
-          </Typography>
-        </Box>
-
-        {/* Form card */}
-        <Box
-          sx={{
-            position: 'relative',
-            zIndex: 2,
-            mt: 'auto',
-            mx: { xs: 0 },
-            background: '#fff',
-            borderRadius: '10px 10px 0 0',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
             overflow: 'hidden',
           }}
         >
-          <LoginForm />
+          {/* Full-page background image on mobile */}
+          <Box
+            component="img"
+            src={loginImg}
+            alt=""
+            sx={{
+              position: 'fixed',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center top',
+              zIndex: 0,
+            }}
+          />
+          <Box
+            sx={{
+              position: 'fixed',
+              inset: 0,
+              background: 'linear-gradient(to bottom, rgba(15,23,42,0.45) 0%, rgba(15,23,42,0.7) 100%)',
+              zIndex: 1,
+            }}
+          />
+
+          {/* Hero text top */}
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 2,
+              pt: 6,
+              px: 4,
+              pb: 2,
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: '1.8rem',
+                lineHeight: 1.2,
+                mb: 1,
+                textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              }}
+            >
+              Dobrodošli u naš centar
+            </Typography>
+            <Typography
+              sx={{
+                color: 'rgba(255,255,255,0.85)',
+                fontSize: '0.95rem',
+                textShadow: '0 1px 6px rgba(0,0,0,0.25)',
+              }}
+            >
+              Profesionalna logopedska pomoć za sve uzraste
+            </Typography>
+          </Box>
+
+          {/* Form card */}
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 2,
+              mt: 'auto',
+              mx: { xs: 0 },
+              background: '#fff',
+              borderRadius: '10px 10px 0 0',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+              overflow: 'hidden',
+            }}
+          >
+            <LoginForm />
+          </Box>
         </Box>
-      </Box>
-    );
-  }
+      ) : (
+        /* Desktop / Tablet */
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'row',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Left: hero image panel — ~65% width */}
+          <Box sx={{ flex: '0 0 62%', display: 'flex' }}>
+            <HeroPanel />
+          </Box>
 
-  /* Desktop / Tablet */
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'row',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Left: hero image panel — ~65% width */}
-      <Box sx={{ flex: '0 0 62%', display: 'flex' }}>
-        <HeroPanel />
-      </Box>
-
-      {/* Right: form panel — ~38% width */}
-      <Box
-        sx={{
-          flex: '0 0 38%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#fff',
-          boxShadow: '-8px 0 48px rgba(0,0,0,0.12)',
-          position: 'relative',
-          zIndex: 1,
-          minHeight: '100vh',
-          overflowY: 'auto',
-        }}
-      >
-        <LoginForm />
-      </Box>
-    </Box>
+          {/* Right: form panel — ~38% width */}
+          <Box
+            sx={{
+              flex: '0 0 38%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: '#fff',
+              boxShadow: '-8px 0 48px rgba(0,0,0,0.12)',
+              position: 'relative',
+              zIndex: 1,
+              minHeight: '100vh',
+              overflowY: 'auto',
+            }}
+          >
+            <LoginForm />
+          </Box>
+        </Box>
+      )}
+    </ThemeProvider>
   );
 }
+

@@ -44,68 +44,80 @@ const FILTER_LABEL_SX = {
 
 // --- Military status box (centered, compact) ---
 function MilitaryStatusBox({ activeRequest }) {
-  let bgColor, borderColor, textColor, Icon, label, subLabel;
-
   if (!activeRequest) {
-    bgColor = 'rgba(239,68,68,0.07)';
-    borderColor = 'rgba(239,68,68,0.2)';
-    textColor = 'error.dark';
-    Icon = Cancel;
-    label = 'Neaktivan';
-    subLabel = null;
-  } else {
-    // Status is computed purely from dates — the backend already filters by date range
-    const daysLeft = differenceInDays(new Date(activeRequest.validUntil), new Date());
-    if (daysLeft <= 5) {
-      bgColor = 'rgba(245,158,11,0.07)';
-      borderColor = 'rgba(245,158,11,0.25)';
-      textColor = 'warning.dark';
-      Icon = Warning;
-      label = 'Aktivan – uskoro ističe';
-      subLabel = daysLeft <= 0
-        ? 'Ističe danas'
-        : `Ističe za ${daysLeft} ${daysLeft === 1 ? 'dan' : 'dana'}`;
-    } else {
-      bgColor = 'rgba(16,185,129,0.07)';
-      borderColor = 'rgba(16,185,129,0.2)';
-      textColor = 'success.dark';
-      Icon = CheckCircle;
-      label = 'Aktivan';
-      subLabel = `Do ${format(new Date(activeRequest.validUntil), 'dd.MM.yyyy')}`;
-    }
+    return (
+      <Box sx={{
+        borderRadius: 1,
+        px: 1,
+        py: 0.875,
+        mb: 1.25,
+        bgcolor: 'rgba(239,68,68,0.07)',
+        border: '1px solid rgba(239,68,68,0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 0.625,
+      }}>
+        <Cancel sx={{ fontSize: 14, color: 'error.dark', flexShrink: 0 }} />
+        <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'error.dark', lineHeight: 1.25 }}>
+          Neaktivan
+        </Typography>
+      </Box>
+    );
   }
+
+  const daysLeft = differenceInDays(new Date(activeRequest.validUntil), new Date());
+  const isExpiring = daysLeft <= 5;
+  const totalSessions = activeRequest.totalSessions ?? 0;
+  const usedSessions = activeRequest.usedSessions ?? 0;
+  const remaining = totalSessions - usedSessions;
+  const expiryDate = format(new Date(activeRequest.validUntil), 'dd.MM.yyyy');
 
   return (
     <Box sx={{
       borderRadius: 1,
-      px: 1,
-      py: 0.875,
+      px: 1.5,
+      py: 1,
       mb: 1.25,
-      bgcolor: bgColor,
-      border: `1px solid ${borderColor}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 0.625,
+      bgcolor: isExpiring ? 'rgba(245,158,11,0.07)' : 'rgba(16,185,129,0.07)',
+      border: `1px solid ${isExpiring ? 'rgba(245,158,11,0.25)' : 'rgba(16,185,129,0.2)'}`,
+      textAlign: 'center',
     }}>
-      <Icon sx={{ fontSize: 14, color: textColor, flexShrink: 0 }} />
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: textColor, lineHeight: 1.25 }}>
-          {label}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.3 }}>
+        <CheckCircle sx={{ fontSize: 13, color: isExpiring ? 'warning.main' : 'success.main' }} />
+        <Typography sx={{
+          fontSize: '0.63rem',
+          color: isExpiring ? 'warning.dark' : 'success.dark',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          fontWeight: 700,
+        }}>
+          Aktivni uput
         </Typography>
-        {subLabel && (
-          <Typography sx={{ fontSize: '0.67rem', color: 'text.secondary', display: 'block', lineHeight: 1.3 }}>
-            {subLabel}
-          </Typography>
-        )}
       </Box>
+      <Typography sx={{
+        fontSize: '0.85rem',
+        fontWeight: 800,
+        color: isExpiring ? 'warning.dark' : 'success.dark',
+        lineHeight: 1.3,
+      }}>
+        {remaining}/{totalSessions} preostalo
+      </Typography>
+      <Typography sx={{
+        fontSize: '0.7rem',
+        fontWeight: 500,
+        color: 'text.secondary',
+        mt: 0.15,
+      }}>
+        | do {expiryDate}.
+      </Typography>
     </Box>
   );
 }
 
 // --- State patient status box (centered, compact) ---
 function StatePatientStatusBox({ p, isAdmin }) {
-  const remainingSessions = p.sessionPrice > 0
+  const remainingSessions = Number(p.sessionPrice) > 0
     ? Math.floor(Number(p.accountBalance) / Number(p.sessionPrice))
     : (p.remainingSessions ?? null);
   const hasBalance = Number(p.accountBalance) > 0;
@@ -210,8 +222,8 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
     >
       <CardContent sx={{ p: '16px !important', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-        {/* Avatar */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125 }}>
+        {/* Avatar + Age badge */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125, position: 'relative' }}>
           <Avatar sx={{
             width: 54,
             height: 54,
@@ -227,6 +239,31 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           }}>
             {initials}
           </Avatar>
+          {age && (
+            <Box sx={{
+              position: 'absolute',
+              top: -4,
+              right: '10%',
+              bgcolor: p.isMilitary ? 'rgba(245,158,11,0.12)' : 'rgba(74,144,226,0.1)',
+              border: '1px solid',
+              borderColor: p.isMilitary ? 'rgba(245,158,11,0.35)' : 'rgba(74,144,226,0.25)',
+              borderRadius: '6px',
+              px: 0.75,
+              py: 0.15,
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}>
+              <Typography sx={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                color: p.isMilitary ? 'warning.dark' : 'primary.dark',
+                letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+              }}>
+                Godine: {age}
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Full name */}
@@ -263,26 +300,9 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           </Typography>
         )}
 
-        {/* Age badge */}
-        {age && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125 }}>
-            <Box sx={{
-              bgcolor: 'action.selected',
-              borderRadius: 1,
-              px: 1,
-              py: 0.2,
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}>
-              <Typography sx={{ fontSize: '0.67rem', fontWeight: 700, color: 'text.secondary', letterSpacing: '0.02em' }}>
-                {age}
-              </Typography>
-            </Box>
-          </Box>
-        )}
-
         {/* Divider */}
         <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mb: 1.125 }} />
+
 
         {/* Therapist (centered) */}
         <Box sx={{
@@ -376,6 +396,21 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
             <StatePatientStatusBox p={p} isAdmin={isAdmin} />
           )}
         </Box>
+
+        {/* Detail link */}
+        <Typography
+          sx={{
+            fontSize: '0.72rem',
+            fontWeight: 500,
+            color: 'text.secondary',
+            textAlign: 'center',
+            mb: 1,
+            cursor: 'pointer',
+            '&:hover': { color: 'primary.main' },
+          }}
+        >
+          Klikni za detalje →
+        </Typography>
 
         {/* Action buttons — both flex: 1, equal width */}
         <Box sx={{

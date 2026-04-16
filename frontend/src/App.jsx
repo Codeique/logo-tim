@@ -55,12 +55,12 @@ export default function App() {
           <Route path="patients/:id" element={<PatientDetailPage />} />
           <Route path="therapists" element={<ProtectedRoute roles={['ADMIN']}><TherapistsPage /></ProtectedRoute>} />
           <Route path="rooms" element={<ProtectedRoute roles={['ADMIN']}><RoomsPage /></ProtectedRoute>} />
-          <Route path="sessions" element={<SessionsPage />} />
+          {/* <Route path="sessions" element={<SessionsPage />} /> */}
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="finance" element={<ProtectedRoute roles={['ADMIN','THERAPIST']}><FinancePage /></ProtectedRoute>} />
           <Route path="transactions" element={<TransactionsPage />} />
-          <Route path="military-requests" element={<MilitaryRequestsPage />} />
-          <Route path="audit-logs" element={<ProtectedRoute roles={['ADMIN']}><AuditLogsPage /></ProtectedRoute>} />
+          {/* <Route path="military-requests" element={<MilitaryRequestsPage />} /> */}
+          {/* <Route path="audit-logs" element={<ProtectedRoute roles={['ADMIN']}><AuditLogsPage /></ProtectedRoute>} /> */}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -102,11 +102,35 @@ export async function completeSession(
       update: { therapistEarning, companyIncome },
     });
 
-    // DI-01: clamp to 0 so remainingSessions never goes negative
-    const updatedPatient = await tx.patient.update({
-      where: { id: session.patientId },
-      data: { remainingSessions: patient.remainingSessions > 0 ? { decrement: 1 } : 0 },
-    });
+    let updatedPatient: Patient;
+
+    if (patient.isMilitary) {
+      // For military patients, increment usedSessions on the active request
+      const today = new Date();
+      const startOfToday = new Date(today);
+      startOfToday.setHours(0, 0, 0, 0);
+      const activeRequest = await tx.militaryRequest.findFirst({
+        where: {
+          patientId: session.patientId,
+          validFrom: { lte: today },
+          validUntil: { gte: startOfToday },
+        },
+        orderBy: { validUntil: 'desc' },
+      });
+      if (activeRequest) {
+        await tx.militaryRequest.update({
+          where: { id: activeRequest.id },
+          data: { usedSessions: { increment: 1 } },
+        });
+      }
+      updatedPatient = patient;
+    } else {
+      // DI-01: clamp to 0 so remainingSessions never goes negative
+      updatedPatient = await tx.patient.update({
+        where: { id: session.patientId },
+        data: { remainingSessions: patient.remainingSessions > 0 ? { decrement: 1 } : 0 },
+      });
+    }
 
     return { session, finance, patient: updatedPatient };
   });
