@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { isTherapistRole } from '../../lib/roles';
 import { parsePagination } from '../../lib/pagination';
+import { getTherapistId } from '../../lib/profileCache';
 
 interface FinanceQuery {
   dateFrom?: string;
@@ -27,8 +28,8 @@ export const list = async (req: Request<{}, {}, {}, FinanceQuery>, res: Response
     }
     if (therapistId) where.therapistId = parseInt(therapistId);
     if (isTherapistRole(req.user.role)) {
-      const t = await prisma.therapist.findUnique({ where: { userId: req.user.id } });
-      if (t) where.therapistId = t.id;
+      const tId = await getTherapistId(req.user.id);
+      if (tId) where.therapistId = tId;
     }
 
     const { skip, take } = parsePagination(req.query);

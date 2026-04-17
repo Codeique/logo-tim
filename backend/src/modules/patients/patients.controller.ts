@@ -73,15 +73,20 @@ export const getById = async (req: Request, res: Response, next: NextFunction): 
       include: {
         therapist: { select: { id: true, firstName: true, lastName: true } },
         sessions: {
-          include: { therapist: { select: { firstName: true, lastName: true } }, room: true },
+          include: {
+            therapist: { select: { firstName: true, lastName: true } },
+            room: { select: { id: true, name: true } },
+          },
           orderBy: { date: 'desc' },
+          take: 100,
         },
         transactions: {
           include: { createdBy: { select: { email: true } } },
           orderBy: { createdAt: 'desc' },
+          take: 100,
         },
-        evaluations: { orderBy: { date: 'desc' } },
-        militaryRequests: { orderBy: { createdAt: 'desc' } },
+        evaluations: { orderBy: { date: 'desc' }, take: 50 },
+        militaryRequests: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
     });
     if (!patient) { res.status(404).json({ message: 'Patient not found' }); return; }

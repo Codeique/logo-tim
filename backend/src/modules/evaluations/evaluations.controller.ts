@@ -3,9 +3,13 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { emitEvent } from '../../socket';
 import { isTherapistRole } from '../../lib/roles';
+import { getTherapistId } from '../../lib/profileCache';
+import { parsePagination } from '../../lib/pagination';
 
 interface EvaluationQuery {
   patientId?: string;
+  page?: string;
+  limit?: string;
 }
 
 interface EvaluationCreateBody {
@@ -24,20 +28,26 @@ interface EvaluationUpdateBody {
 export const list = async (req: Request<{}, {}, {}, EvaluationQuery>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { patientId } = req.query;
+    const { skip, take, page, limit } = parsePagination(req.query);
     const where: Prisma.EvaluationWhereInput = patientId ? { patientId: parseInt(patientId) } : {};
 
     // SEC-05: scope THERAPIST/CHIEF_THERAPIST to their own patients' evaluations
     if (isTherapistRole(req.user.role)) {
-      const t = await prisma.therapist.findUnique({ where: { userId: req.user.id } });
-      if (t) where.patient = { therapistId: t.id };
+      const tId = await getTherapistId(req.user.id);
+      if (tId) where.patient = { therapistId: tId };
     }
 
-    const evaluations = await prisma.evaluation.findMany({
-      where,
-      include: { patient: { select: { firstName: true, lastName: true } } },
-      orderBy: { date: 'desc' },
-    });
-    res.json(evaluations);
+    const [evaluations, total] = await Promise.all([
+      prisma.evaluation.findMany({
+        where,
+        skip,
+        take,
+        include: { patient: { select: { firstName: true, lastName: true } } },
+        orderBy: { date: 'desc' },
+      }),
+      prisma.evaluation.count({ where }),
+    ]);
+    res.json({ data: evaluations, total, page, limit });
   } catch (err) { next(err); }
 };
 
@@ -47,9 +57,11 @@ export const create = async (req: Request<{}, {}, EvaluationCreateBody>, res: Re
 
     // SEC-05: THERAPIST can only create evaluations for their own patients
     if (isTherapistRole(req.user.role)) {
-      const t = await prisma.therapist.findUnique({ where: { userId: req.user.id } });
-      const patient = await prisma.patient.findUnique({ where: { id: parseInt(String(patientId)) } });
-      if (!t || !patient || patient.therapistId !== t.id) {
+      const [tId, patient] = await Promise.all([
+        getTherapistId(req.user.id),
+        prisma.patient.findUnique({ where: { id: parseInt(String(patientId)) }, select: { therapistId: true } }),
+      ]);
+      if (!tId || !patient || patient.therapistId !== tId) {
         res.status(403).json({ message: 'Forbidden' }); return;
       }
     }
@@ -74,12 +86,14 @@ export const update = async (req: Request<{ id: string }, {}, EvaluationUpdateBo
 
     // SEC-05: THERAPIST can only update evaluations for their own patients
     if (isTherapistRole(req.user.role)) {
-      const t = await prisma.therapist.findUnique({ where: { userId: req.user.id } });
-      const existing = await prisma.evaluation.findUnique({
-        where: { id: parseInt(req.params.id) },
-        include: { patient: { select: { therapistId: true } } },
-      });
-      if (!t || !existing || existing.patient.therapistId !== t.id) {
+      const [tId, existing] = await Promise.all([
+        getTherapistId(req.user.id),
+        prisma.evaluation.findUnique({
+          where: { id: parseInt(req.params.id) },
+          select: { patient: { select: { therapistId: true } } },
+        }),
+      ]);
+      if (!tId || !existing || existing.patient.therapistId !== tId) {
         res.status(403).json({ message: 'Forbidden' }); return;
       }
     }

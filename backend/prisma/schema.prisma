@@ -158,6 +158,9 @@ model Evaluation {
   therapyProposal String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([patientId, date])
 }
 
 /// DI-02: status is stored at write time but is NOT authoritative at read time.
@@ -176,6 +179,9 @@ model MilitaryRequest {
   note          String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@index([patientId])
+  @@index([patientId, validFrom, validUntil])
 }
 
 model Finance {

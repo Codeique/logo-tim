@@ -9,7 +9,7 @@ import prisma from '../../lib/prisma';
  * where start/end are minutes since midnight.
  */
 async function hasOverlap(
-  field: 'room_id' | 'therapist_id',
+  field: 'roomId' | 'therapistId',
   fieldValue: number,
   date: string,
   startTime: string,
@@ -50,7 +50,7 @@ export async function checkRoomConflict(
   excludeId: number | null = null,
 ): Promise<boolean> {
   if (!roomId) return false;
-  return hasOverlap('room_id', parseInt(String(roomId)), date, startTime, parseInt(String(duration)), excludeId);
+  return hasOverlap('roomId', parseInt(String(roomId)), date, startTime, parseInt(String(duration)), excludeId);
 }
 
 /**
@@ -64,7 +64,7 @@ export async function checkTherapistConflict(
   duration: number | string,
   excludeId: number | null = null,
 ): Promise<boolean> {
-  return hasOverlap('therapist_id', parseInt(String(therapistId)), date, startTime, parseInt(String(duration)), excludeId);
+  return hasOverlap('therapistId', parseInt(String(therapistId)), date, startTime, parseInt(String(duration)), excludeId);
 }
 
 /**
