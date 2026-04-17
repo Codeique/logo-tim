@@ -211,7 +211,12 @@ function LoginForm({ onSuccess }) {
                 backgroundColor: 'rgba(0,0,0,0.02)',
                 '&:hover': { backgroundColor: 'rgba(0,0,0,0.03)' },
                 '&.Mui-focused': {
-                  backgroundColor: '#fff',
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                },
+                '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
+                  WebkitBoxShadow: '0 0 0 100px #f9f9f9 inset',
+                  WebkitTextFillColor: 'inherit',
+                  transition: 'background-color 5000s ease-in-out 0s',
                 },
               },
             }}
@@ -261,7 +266,12 @@ function LoginForm({ onSuccess }) {
                 backgroundColor: 'rgba(0,0,0,0.02)',
                 '&:hover': { backgroundColor: 'rgba(0,0,0,0.03)' },
                 '&.Mui-focused': {
-                  backgroundColor: '#fff',
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                },
+                '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
+                  WebkitBoxShadow: '0 0 0 100px #f9f9f9 inset',
+                  WebkitTextFillColor: 'inherit',
+                  transition: 'background-color 5000s ease-in-out 0s',
                 },
               },
             }}
