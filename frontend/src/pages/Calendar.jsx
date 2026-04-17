@@ -11,6 +11,7 @@ import api from '../api/axios';
 import SessionFormDialog from '../components/SessionFormDialog';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 - 20:00
+const ROW_HEIGHT = 68; // px per hour
 
 const STATUS_CONFIG = {
   SCHEDULED: { color: '#4A90E2', bg: 'rgba(74,144,226,0.85)', label: 'Zakazano' },
@@ -40,18 +41,23 @@ export default function CalendarPage() {
 
   const sessions = data?.data || [];
 
-  const getSessionsForDayHour = (day, hour) => {
+  const getSessionsForDay = (day) => {
     const dayStr = format(day, 'yyyy-MM-dd');
     return sessions.filter(s => {
-      // Compare the date portion of the ISO string directly to avoid
-      // timezone shifts (new Date('2024-01-15T00:00:00.000Z') is Jan 14
-      // in UTC−5, which would place sessions on the wrong day).
-      const sessionDayStr = s.date ? s.date.slice(0, 10) : null;
-      if (sessionDayStr !== dayStr) return false;
-      // Guard against null/undefined startTime (bad data in DB).
+      if (s.date?.slice(0, 10) !== dayStr) return false;
       const [h] = (s.startTime || '00:00').split(':').map(Number);
-      return h === hour;
+      return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
     });
+  };
+
+  const getSessionTop = (session) => {
+    const [h, m] = (session.startTime || '00:00').split(':').map(Number);
+    return (h - HOURS[0]) * ROW_HEIGHT + (m / 60) * ROW_HEIGHT;
+  };
+
+  const getSessionHeight = (session) => {
+    const duration = session.duration || 60;
+    return Math.max((duration / 60) * ROW_HEIGHT, 22);
   };
 
   const handleSlotClick = (day, hour) => {
@@ -232,94 +238,114 @@ export default function CalendarPage() {
             </Box>
 
             {/* Time grid */}
-            {HOURS.map(hour => (
-              <Box
-                key={hour}
-                sx={{
-                  display: 'flex',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  minHeight: 68,
-                }}
-              >
-                {/* Hour label */}
-                <Box sx={{
-                  width: 64,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  pt: 1,
-                  px: 1,
-                  borderRight: '1px solid',
-                  borderColor: 'divider',
-                  bgcolor: 'background.default',
-                }}>
-                  <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
-                    {String(hour).padStart(2, '0')}:00
-                  </Typography>
-                </Box>
-
-                {/* Day columns */}
-                {days.map(day => {
-                  const daySessions = getSessionsForDayHour(day, hour);
-                  const isToday = isSameDay(day, new Date());
-                  return (
-                    <Box
-                      key={day.toISOString()}
-                      onClick={() => handleSlotClick(day, hour)}
-                      sx={{
-                        flex: 1,
-                        borderRight: '1px solid',
-                        borderColor: 'divider',
-                        '&:last-child': { borderRight: 0 },
-                        p: 0.5,
-                        cursor: 'pointer',
-                        transition: 'background 0.1s',
-                        bgcolor: isToday ? 'rgba(74,144,226,0.02)' : 'transparent',
-                        '&:hover': { bgcolor: isToday ? 'rgba(74,144,226,0.05)' : 'action.hover' },
-                        minHeight: 68,
-                      }}
-                    >
-                      {daySessions.map(s => {
-                        const sc = STATUS_CONFIG[s.status] || { bg: '#64748B', label: s.status };
-                        return (
-                          <Tooltip
-                            key={s.id}
-                            title={`${s.patient?.firstName} ${s.patient?.lastName} · ${s.therapist?.firstName} ${s.therapist?.lastName}${s.room ? ` · ${s.room.name}` : ''} · ${s.duration}min`}
-                          >
-                            <Box
-                              onClick={(e) => handleSessionClick(s, e)}
-                              sx={{
-                                bgcolor: sc.bg,
-                                color: 'white',
-                                borderRadius: 1,
-                                p: '3px 6px',
-                                mb: 0.5,
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                opacity: s.status === 'CANCELED' ? 0.5 : 1,
-                                transition: 'opacity 0.15s, transform 0.1s',
-                                '&:hover': {
-                                  opacity: s.status === 'CANCELED' ? 0.6 : 0.88,
-                                  transform: 'scale(1.01)',
-                                },
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                lineHeight: 1.4,
-                              }}
-                            >
-                              {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
-                            </Box>
-                          </Tooltip>
-                        );
-                      })}
-                    </Box>
-                  );
-                })}
+            <Box sx={{ display: 'flex' }}>
+              {/* Hour labels column */}
+              <Box sx={{
+                width: 64,
+                flexShrink: 0,
+                borderRight: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.default',
+              }}>
+                {HOURS.map(hour => (
+                  <Box key={hour} sx={{
+                    height: ROW_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    pt: 1,
+                    px: 1,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                  }}>
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
+                      {String(hour).padStart(2, '0')}:00
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
-            ))}
+
+              {/* Days area with absolute session overlay */}
+              <Box sx={{ flex: 1, position: 'relative' }}>
+                {/* Grid rows — background lines + click handlers */}
+                {HOURS.map(hour => (
+                  <Box key={hour} sx={{ display: 'flex', height: ROW_HEIGHT, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    {days.map(day => {
+                      const isToday = isSameDay(day, new Date());
+                      return (
+                        <Box
+                          key={day.toISOString()}
+                          onClick={() => handleSlotClick(day, hour)}
+                          sx={{
+                            flex: 1,
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            '&:last-child': { borderRight: 0 },
+                            cursor: 'pointer',
+                            transition: 'background 0.1s',
+                            bgcolor: isToday ? 'rgba(74,144,226,0.02)' : 'transparent',
+                            '&:hover': { bgcolor: isToday ? 'rgba(74,144,226,0.05)' : 'action.hover' },
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                ))}
+
+                {/* Sessions — absolutely positioned, sized by duration */}
+                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
+                  {days.map((day, dayIndex) => {
+                    const daySessions = getSessionsForDay(day);
+                    const colWidth = `${100 / days.length}%`;
+                    const colLeft = `${(dayIndex / days.length) * 100}%`;
+                    return daySessions.map(s => {
+                      const sc = STATUS_CONFIG[s.status] || { bg: '#64748B', label: s.status };
+                      const top = getSessionTop(s);
+                      const height = getSessionHeight(s);
+                      return (
+                        <Tooltip
+                          key={s.id}
+                          title={`${s.patient?.firstName} ${s.patient?.lastName} · ${s.therapist?.firstName} ${s.therapist?.lastName}${s.room ? ` · ${s.room.name}` : ''} · ${s.duration}min`}
+                        >
+                          <Box
+                            onClick={(e) => handleSessionClick(s, e)}
+                            sx={{
+                              position: 'absolute',
+                              top,
+                              left: `calc(${colLeft} + 4px)`,
+                              width: `calc(${colWidth} - 8px)`,
+                              height,
+                              bgcolor: sc.bg,
+                              color: 'white',
+                              borderRadius: 1,
+                              px: '6px',
+                              py: '3px',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              pointerEvents: 'auto',
+                              opacity: s.status === 'CANCELED' ? 0.5 : 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.4,
+                              zIndex: 1,
+                              boxSizing: 'border-box',
+                              transition: 'opacity 0.15s, transform 0.1s',
+                              '&:hover': {
+                                opacity: s.status === 'CANCELED' ? 0.6 : 0.88,
+                                transform: 'scale(1.01)',
+                              },
+                            }}
+                          >
+                            {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
+                          </Box>
+                        </Tooltip>
+                      );
+                    });
+                  })}
+                </Box>
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Card>
