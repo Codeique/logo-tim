@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Grid, MenuItem, CircularProgress,
-  Alert, Switch, FormControlLabel,
+  Alert, Switch, FormControlLabel, Autocomplete,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
+import { SESSION_STATUS } from '../utils/statusConfig';
 
 const EMPTY = {
   patientId: '', therapistId: '', roomId: '', date: '',
-  startTime: '', duration: '45', treatmentType: 'Logopedska terapija',
+  startTime: '', duration: '45', treatmentType: '',
   status: 'SCHEDULED', isPaid: false,
 };
 
@@ -28,7 +29,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
         date: session.date ? session.date.split('T')[0] : '',
         startTime: session.startTime || '',
         duration: session.duration || '45',
-        treatmentType: session.treatmentType || 'Logopedska terapija',
+        treatmentType: session.treatmentType || '',
         status: session.status || 'SCHEDULED',
         isPaid: session.isPaid || false,
       });
@@ -40,10 +41,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
     setConflictError('');
   }, [session, defaultSlot, open]);
 
-  // When editing, include inactive patients so the existing patient always appears.
-  const patientsUrl = session
-    ? '/patients?limit=200'
-    : '/patients?active=true&limit=200';
+  const patientsUrl = session ? '/patients?limit=200' : '/patients?active=true&limit=200';
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patients-form', session ? 'all' : 'active'],
@@ -55,6 +53,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
     }),
     enabled: open,
   });
+
   const { data: therapists = [] } = useQuery({
     queryKey: ['therapists'],
     queryFn: () => api.get('/therapists').then(r => {
@@ -63,12 +62,19 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
     }),
     enabled: open,
   });
+
   const { data: rooms = [] } = useQuery({
     queryKey: ['rooms'],
     queryFn: () => api.get('/rooms').then(r => {
       const d = r.data;
       return Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
     }),
+    enabled: open,
+  });
+
+  const { data: treatmentTypes = [] } = useQuery({
+    queryKey: ['treatment-types'],
+    queryFn: () => api.get('/sessions/treatment-types').then(r => r.data),
     enabled: open,
   });
 
@@ -79,6 +85,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sessions'] });
       qc.invalidateQueries({ queryKey: ['calendar'] });
+      qc.invalidateQueries({ queryKey: ['treatment-types'] });
       toast.success(session ? 'Tretman ažuriran' : 'Tretman kreiran');
       onClose();
     },
@@ -112,7 +119,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
           <Grid item xs={12}>
             <TextField fullWidth select label="Pacijent *" value={form.patientId} onChange={set('patientId')}>
               <MenuItem value=""><em>Odaberi pacijenta</em></MenuItem>
-              {(patients || []).map(p => (
+              {patients.map(p => (
                 <MenuItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</MenuItem>
               ))}
             </TextField>
@@ -120,7 +127,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
           <Grid item xs={12} sm={6}>
             <TextField fullWidth select label="Logoped *" value={form.therapistId} onChange={set('therapistId')}>
               <MenuItem value=""><em>Odaberi logopeda</em></MenuItem>
-              {(therapists || []).map(t => (
+              {therapists.map(t => (
                 <MenuItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</MenuItem>
               ))}
             </TextField>
@@ -128,7 +135,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
           <Grid item xs={12} sm={6}>
             <TextField fullWidth select label="Prostorija" value={form.roomId} onChange={set('roomId')}>
               <MenuItem value="">Nema</MenuItem>
-              {(rooms || []).map(r => (
+              {rooms.map(r => (
                 <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
               ))}
             </TextField>
@@ -145,14 +152,21 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
             <TextField fullWidth label="Trajanje (min)" type="number" value={form.duration} onChange={set('duration')} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Tip tretmana" value={form.treatmentType} onChange={set('treatmentType')} />
+            <Autocomplete
+              freeSolo
+              options={treatmentTypes}
+              value={form.treatmentType}
+              onChange={(_, v) => setForm(f => ({ ...f, treatmentType: v || '' }))}
+              onInputChange={(_, v) => setForm(f => ({ ...f, treatmentType: v }))}
+              renderInput={(params) => <TextField {...params} fullWidth label="Tip tretmana" />}
+            />
           </Grid>
           {session && (
             <Grid item xs={12} sm={6}>
               <TextField fullWidth select label="Status" value={form.status} onChange={set('status')}>
-                <MenuItem value="SCHEDULED">Zakazano</MenuItem>
-                <MenuItem value="COMPLETED">Završeno</MenuItem>
-                <MenuItem value="CANCELED">Otkazano</MenuItem>
+                {Object.entries(SESSION_STATUS).map(([k, v]) => (
+                  <MenuItem key={k} value={k}>{v.label}</MenuItem>
+                ))}
               </TextField>
             </Grid>
           )}

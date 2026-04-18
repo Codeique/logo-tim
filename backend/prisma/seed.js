@@ -122,14 +122,13 @@ async function main() {
   });
 
   // Sessions
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const today = new Date();
   const sessionsToCreate = [];
   const therapists = [t1, t2, t3];
 
   for (let i = 0; i < 25; i++) {
-    const base = new Date(todayStr);
-    base.setDate(base.getDate() - Math.floor(Math.random() * 30));
-    const d = new Date(base.toISOString().slice(0, 10));
+    const d = new Date(today);
+    d.setDate(d.getDate() - Math.floor(Math.random() * 30));
     const t = therapists[i % 3];
     const p = patients[i % patients.length];
     const hour = 8 + (i % 8);

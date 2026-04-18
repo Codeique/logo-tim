@@ -34,6 +34,18 @@ interface SessionUpdateBody extends Partial<SessionCreateBody> {
   report?: string;
 }
 
+export const listTreatmentTypes = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const rows = await prisma.session.findMany({
+      where: { treatmentType: { not: null } },
+      select: { treatmentType: true },
+      distinct: ['treatmentType'],
+      orderBy: { treatmentType: 'asc' },
+    });
+    res.json(rows.map(r => r.treatmentType).filter(Boolean));
+  } catch (err) { next(err); }
+};
+
 export const list = async (req: Request<{}, {}, {}, SessionListQuery>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { dateFrom, dateTo, therapistId, patientId, roomId, status, page = '1', limit = '100' } = req.query;

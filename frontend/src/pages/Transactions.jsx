@@ -12,6 +12,7 @@ import api from '../api/axios';
 import { formatCurrency } from '../utils/currency';
 import useAuthStore from '../store/authStore';
 import AddTransactionDialog from '../components/AddTransactionDialog';
+import { TRANSACTION_TYPE } from '../utils/statusConfig';
 
 export default function TransactionsPage() {
   const { user } = useAuthStore();
@@ -219,9 +220,9 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={t.type === 'REFUND' ? 'Povrat' : 'Uplata'}
+                        label={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).label}
                         size="small"
-                        color={t.type === 'REFUND' ? 'error' : 'success'}
+                        color={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).color}
                         variant="outlined"
                       />
                     </TableCell>

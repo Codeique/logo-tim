@@ -7,6 +7,7 @@ import { createSessionValidation, updateSessionValidation } from './sessions.val
 const router = Router();
 
 router.use(authenticate);
+router.get('/treatment-types', ctrl.listTreatmentTypes);
 router.get('/', ctrl.list);
 router.get('/:id', ctrl.getById);
 router.post('/', authorize('ADMIN', 'THERAPIST'), createSessionValidation, validate, ctrl.create);

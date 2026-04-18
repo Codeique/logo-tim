@@ -8,12 +8,7 @@ import { Assessment } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import api from '../api/axios';
-
-const ACTION_CONFIG = {
-  CREATE: { color: 'success', label: 'Kreiranje' },
-  UPDATE: { color: 'warning', label: 'Ažuriranje' },
-  DELETE: { color: 'error', label: 'Brisanje' },
-};
+import { ACTION_CONFIG, ROLE_CONFIG } from '../utils/statusConfig';
 
 export default function AuditLogsPage() {
   const [page, setPage] = useState(1);
@@ -113,7 +108,7 @@ export default function AuditLogsPage() {
                               {log.user?.email}
                             </Typography>
                             <Chip
-                              label={log.user?.role === 'ADMIN' ? 'Admin' : log.user?.role === 'CHIEF_THERAPIST' ? 'Glavni logoped' : log.user?.role === 'THERAPIST' ? 'Logoped' : 'Pacijent'}
+                              label={(ROLE_CONFIG[log.user?.role] ?? ROLE_CONFIG.PATIENT).label}
                               size="small"
                               variant="outlined"
                               sx={{ height: 16, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}

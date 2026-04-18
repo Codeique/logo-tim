@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import api from '../api/axios';
 import { formatCurrency } from '../utils/currency';
+import { SESSION_STATUS } from '../utils/statusConfig';
 
 const SummaryCard = ({ title, value, icon: Icon, color, gradient }) => (
   <Card>
@@ -193,9 +194,9 @@ export default function FinancePage() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={r.session?.status === 'COMPLETED' ? 'Završeno' : r.session?.status === 'CANCELED' ? 'Otkazano' : 'Zakazano'}
+                        label={(SESSION_STATUS[r.session?.status] ?? SESSION_STATUS.SCHEDULED).label}
                         size="small"
-                        color={r.session?.status === 'COMPLETED' ? 'success' : 'default'}
+                        color={(SESSION_STATUS[r.session?.status] ?? SESSION_STATUS.SCHEDULED).chipColor}
                         variant="outlined"
                       />
                     </TableCell>

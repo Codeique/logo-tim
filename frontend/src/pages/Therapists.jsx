@@ -13,28 +13,7 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import TherapistFormDialog from '../components/TherapistFormDialog';
 import { formatCurrency } from '../utils/currency';
-
-// ─── Role config ──────────────────────────────────────────────────────────────
-const ROLE_CONFIG = {
-  ADMIN: {
-    label: 'Admin',
-    color: '#7C3AED',
-    bg: 'rgba(124,58,237,0.09)',
-    border: 'rgba(124,58,237,0.22)',
-  },
-  THERAPIST: {
-    label: 'Logoped',
-    color: '#0284C7',
-    bg: 'rgba(2,132,199,0.09)',
-    border: 'rgba(2,132,199,0.22)',
-  },
-  CHIEF_THERAPIST: {
-    label: 'Glavni terapeut',
-    color: '#0F766E',
-    bg: 'rgba(15,118,110,0.09)',
-    border: 'rgba(15,118,110,0.22)',
-  },
-};
+import { ROLE_CONFIG } from '../utils/statusConfig';
 
 const getRoleConfig = (role) => ROLE_CONFIG[role] ?? ROLE_CONFIG.THERAPIST;
 

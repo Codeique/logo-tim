@@ -11,6 +11,7 @@ import { format, differenceInCalendarDays } from 'date-fns';
 import api from '../api/axios';
 import { computeRequestStatus, requestStatusColor, requestStatusLabel } from '../utils/militaryStatus';
 import { formatCurrency } from '../utils/currency';
+import { SESSION_STATUS, TRANSACTION_TYPE } from '../utils/statusConfig';
 import useAuthStore from '../store/authStore';
 import PatientFormDialog from '../components/PatientFormDialog';
 import AddTransactionDialog from '../components/AddTransactionDialog';
@@ -392,9 +393,9 @@ export default function PatientDetailPage() {
                         <TableCell>{s.duration} min</TableCell>
                         <TableCell>
                           <Chip
-                            label={s.status === 'COMPLETED' ? 'Završeno' : s.status === 'CANCELED' ? 'Otkazano' : 'Zakazano'}
+                            label={(SESSION_STATUS[s.status] ?? SESSION_STATUS.SCHEDULED).label}
                             size="small"
-                            color={s.status === 'COMPLETED' ? 'success' : s.status === 'CANCELED' ? 'error' : 'primary'}
+                            color={(SESSION_STATUS[s.status] ?? SESSION_STATUS.SCHEDULED).chipColor}
                             variant="outlined"
                           />
                         </TableCell>
@@ -458,9 +459,9 @@ export default function PatientDetailPage() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={t.type === 'REFUND' ? 'Povrat' : 'Uplata'}
+                            label={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).label}
                             size="small"
-                            color={t.type === 'REFUND' ? 'error' : 'success'}
+                            color={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).color}
                             variant="outlined"
                           />
                         </TableCell>

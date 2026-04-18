@@ -7,12 +7,7 @@ import api from '../api/axios';
 import useAuthStore from '../store/authStore';
 import { format } from 'date-fns';
 import { srLatn } from 'date-fns/locale';
-
-const STATUS_COLORS = {
-  SCHEDULED: { color: 'primary', label: 'Zakazano' },
-  COMPLETED: { color: 'success', label: 'Završeno' },
-  CANCELED: { color: 'error', label: 'Otkazano' },
-};
+import { SESSION_STATUS } from '../utils/statusConfig';
 
 const StatCard = ({ title, value, icon: Icon, gradient, onClick, loading, subtitle }) => (
   <Card
@@ -195,7 +190,7 @@ export default function DashboardPage() {
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {todaySessions.slice(0, 8).map((s) => {
-                    const sc = STATUS_COLORS[s.status] || { color: 'default', label: s.status };
+                    const sc = SESSION_STATUS[s.status] || { chipColor: 'default', label: s.status };
                     return (
                       <Box
                         key={s.id}
@@ -237,7 +232,7 @@ export default function DashboardPage() {
                         <Chip
                           label={sc.label}
                           size="small"
-                          color={sc.color}
+                          color={sc.chipColor}
                           variant="outlined"
                         />
                       </Box>

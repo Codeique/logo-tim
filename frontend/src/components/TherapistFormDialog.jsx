@@ -9,12 +9,7 @@ import { Close } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
-
-const ROLE_OPTIONS = [
-  { value: 'ADMIN', label: 'Admin' },
-  { value: 'THERAPIST', label: 'Logoped' },
-  { value: 'CHIEF_THERAPIST', label: 'Glavni terapeut' },
-];
+import { ROLE_OPTIONS } from '../utils/statusConfig';
 
 const EMPTY = {
   firstName: '', lastName: '', email: '', password: '',

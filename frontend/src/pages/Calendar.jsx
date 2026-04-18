@@ -9,15 +9,10 @@ import { format, addDays, startOfWeek, addWeeks, subWeeks, isSameDay } from 'dat
 import { srLatn } from 'date-fns/locale';
 import api from '../api/axios';
 import SessionFormDialog from '../components/SessionFormDialog';
+import { SESSION_STATUS } from '../utils/statusConfig';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 - 20:00
 const ROW_HEIGHT = 68;
-
-const STATUS_CONFIG = {
-  SCHEDULED: { color: '#4A90E2', bg: 'rgba(74,144,226,0.85)', label: 'Zakazano' },
-  COMPLETED: { color: '#10B981', bg: 'rgba(16,185,129,0.85)', label: 'Završeno' },
-  CANCELED: { color: '#EF4444', bg: 'rgba(239,68,68,0.7)', label: 'Otkazano' },
-};
 
 export default function CalendarPage() {
   const [view, setView] = useState('week');
@@ -109,7 +104,7 @@ export default function CalendarPage() {
   const pageTitle = view === 'week' ? 'Nedeljni raspored' : 'Dnevni raspored';
 
   const sessionCard = (s, colIndex, numCols) => {
-    const sc = STATUS_CONFIG[s.status] || { bg: '#64748B', label: s.status };
+    const sc = SESSION_STATUS[s.status] || { bg: '#64748B', label: s.status };
     const colWidth = `${100 / numCols}%`;
     const colLeft = `${(colIndex / numCols) * 100}%`;
     return (
@@ -363,9 +358,9 @@ export default function CalendarPage() {
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+        {Object.entries(SESSION_STATUS).map(([key, cfg]) => (
           <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cfg.color }} />
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cfg.hex }} />
             <Typography variant="caption" color="text.secondary" fontWeight={500}>
               {cfg.label}
             </Typography>

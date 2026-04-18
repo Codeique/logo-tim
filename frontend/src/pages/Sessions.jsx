@@ -12,12 +12,7 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import useAuthStore from '../store/authStore';
 import SessionFormDialog from '../components/SessionFormDialog';
-
-const STATUS_MAP = {
-  SCHEDULED: { color: 'primary', label: 'Zakazano' },
-  COMPLETED: { color: 'success', label: 'Završeno' },
-  CANCELED: { color: 'error', label: 'Otkazano' },
-};
+import { SESSION_STATUS } from '../utils/statusConfig';
 
 export default function SessionsPage() {
   const { user } = useAuthStore();
@@ -201,7 +196,7 @@ export default function SessionsPage() {
                     </TableCell>
                   </TableRow>
                 ) : sessions.map(s => {
-                  const sc = STATUS_MAP[s.status] || { color: 'default', label: s.status };
+                  const sc = SESSION_STATUS[s.status] || { chipColor: 'default', label: s.status };
                   return (
                     <TableRow key={s.id} hover>
                       <TableCell sx={{ fontWeight: 500 }}>
@@ -236,7 +231,7 @@ export default function SessionsPage() {
                         <Chip
                           label={sc.label}
                           size="small"
-                          color={sc.color}
+                          color={sc.chipColor}
                           variant="outlined"
                         />
                       </TableCell>
