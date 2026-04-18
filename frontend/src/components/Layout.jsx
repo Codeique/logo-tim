@@ -20,7 +20,7 @@ const navItems = [
   { label: 'Pacijenti', path: '/patients', icon: People, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
   { label: 'Logopedi', path: '/therapists', icon: Person, roles: ['ADMIN'] },
   { label: 'Prostorije', path: '/rooms', icon: MeetingRoom, roles: ['ADMIN'] },
-  { label: 'Nedeljni raspored', path: '/calendar', icon: CalendarMonth, roles: ['ADMIN', 'THERAPIST'] },
+  { label: 'Nedeljni/Dnevni raspored', path: '/calendar', icon: CalendarMonth, roles: ['ADMIN', 'THERAPIST'] },
   // { label: 'Tretmani', path: '/sessions', icon: EventNote, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
   { label: 'Transakcije', path: '/transactions', icon: Receipt, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
   { label: 'Finansije', path: '/finance', icon: AccountBalance, roles: ['ADMIN', 'THERAPIST'] },
