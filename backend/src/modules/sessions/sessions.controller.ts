@@ -45,7 +45,7 @@ export const list = async (req: Request<{}, {}, {}, SessionListQuery>, res: Resp
     if (dateFrom || dateTo) {
       where.date = {
         ...(dateFrom && { gte: new Date(dateFrom) }),
-        ...(dateTo && { lte: new Date(dateTo) }),
+        ...(dateTo && { lt: new Date(new Date(dateTo).getTime() + 86_400_000) }),
       };
     }
     if (therapistId) where.therapistId = parseInt(therapistId);
