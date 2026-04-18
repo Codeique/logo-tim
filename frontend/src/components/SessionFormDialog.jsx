@@ -33,7 +33,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
         isPaid: session.isPaid || false,
       });
     } else if (defaultSlot) {
-      setForm(f => ({ ...EMPTY, date: defaultSlot.date, startTime: defaultSlot.startTime }));
+      setForm(f => ({ ...EMPTY, date: defaultSlot.date, startTime: defaultSlot.startTime, roomId: defaultSlot.roomId ?? '' }));
     } else {
       setForm(EMPTY);
     }

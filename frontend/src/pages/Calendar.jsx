@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, Card, CardContent, Button, IconButton,
-  Chip, Tooltip, Select, MenuItem, FormControl,
+  Box, Typography, Card, Button, IconButton,
+  Tooltip, Select, MenuItem, FormControl,
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Add, Today, CalendarMonth } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
@@ -11,7 +11,7 @@ import api from '../api/axios';
 import SessionFormDialog from '../components/SessionFormDialog';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 - 20:00
-const ROW_HEIGHT = 68; // px per hour
+const ROW_HEIGHT = 68;
 
 const STATUS_CONFIG = {
   SCHEDULED: { color: '#4A90E2', bg: 'rgba(74,144,226,0.85)', label: 'Zakazano' },
@@ -34,17 +34,33 @@ export default function CalendarPage() {
   const dateFrom = format(days[0], 'yyyy-MM-dd');
   const dateTo = format(days[days.length - 1], 'yyyy-MM-dd');
 
-  const { data } = useQuery({
+  const { data: sessionsData } = useQuery({
     queryKey: ['calendar', dateFrom, dateTo],
     queryFn: () => api.get('/sessions', { params: { dateFrom, dateTo, limit: 500 } }).then(r => r.data),
   });
 
-  const sessions = data?.data || [];
+  const { data: roomsData } = useQuery({
+    queryKey: ['rooms'],
+    queryFn: () => api.get('/rooms').then(r => r.data),
+  });
+
+  const sessions = sessionsData?.data || [];
+  const activeRooms = useMemo(() => (roomsData || []).filter(r => r.isActive), [roomsData]);
 
   const getSessionsForDay = (day) => {
     const dayStr = format(day, 'yyyy-MM-dd');
     return sessions.filter(s => {
       if (s.date?.slice(0, 10) !== dayStr) return false;
+      const [h] = (s.startTime || '00:00').split(':').map(Number);
+      return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
+    });
+  };
+
+  const getSessionsForDayAndRoom = (day, roomId) => {
+    const dayStr = format(day, 'yyyy-MM-dd');
+    return sessions.filter(s => {
+      if (s.date?.slice(0, 10) !== dayStr) return false;
+      if (s.roomId !== roomId) return false;
       const [h] = (s.startTime || '00:00').split(':').map(Number);
       return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
     });
@@ -60,8 +76,12 @@ export default function CalendarPage() {
     return Math.max((duration / 60) * ROW_HEIGHT, 22);
   };
 
-  const handleSlotClick = (day, hour) => {
-    const slot = { date: format(day, 'yyyy-MM-dd'), startTime: `${String(hour).padStart(2, '0')}:00` };
+  const handleSlotClick = (day, hour, roomId = null) => {
+    const slot = {
+      date: format(day, 'yyyy-MM-dd'),
+      startTime: `${String(hour).padStart(2, '0')}:00`,
+      ...(roomId != null ? { roomId } : {}),
+    };
     setSelectedSlot(slot);
     setSelectedSession(null);
     setFormOpen(true);
@@ -86,32 +106,211 @@ export default function CalendarPage() {
     ? `${format(days[0], 'd. MMM', { locale: srLatn })} – ${format(days[6], 'd. MMM yyyy.', { locale: srLatn })}`
     : format(currentDate, 'EEEE, d. MMMM yyyy.', { locale: srLatn });
 
+  const pageTitle = view === 'week' ? 'Nedeljni raspored' : 'Dnevni raspored';
+
+  const sessionCard = (s, colIndex, numCols) => {
+    const sc = STATUS_CONFIG[s.status] || { bg: '#64748B', label: s.status };
+    const colWidth = `${100 / numCols}%`;
+    const colLeft = `${(colIndex / numCols) * 100}%`;
+    return (
+      <Tooltip
+        key={s.id}
+        title={`${s.patient?.firstName} ${s.patient?.lastName} · ${s.therapist?.firstName} ${s.therapist?.lastName}${s.room ? ` · ${s.room.name}` : ''} · ${s.duration}min`}
+      >
+        <Box
+          onClick={(e) => handleSessionClick(s, e)}
+          sx={{
+            position: 'absolute',
+            top: getSessionTop(s),
+            left: `calc(${colLeft} + 4px)`,
+            width: `calc(${colWidth} - 8px)`,
+            height: getSessionHeight(s),
+            bgcolor: sc.bg,
+            color: 'white',
+            borderRadius: 1,
+            px: '6px',
+            py: '3px',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            pointerEvents: 'auto',
+            opacity: s.status === 'CANCELED' ? 0.5 : 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.4,
+            zIndex: 1,
+            boxSizing: 'border-box',
+            transition: 'opacity 0.15s, transform 0.1s',
+            '&:hover': {
+              opacity: s.status === 'CANCELED' ? 0.6 : 0.88,
+              transform: 'scale(1.01)',
+            },
+          }}
+        >
+          {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
+        </Box>
+      </Tooltip>
+    );
+  };
+
+  const renderWeekGrid = () => (
+    <Box sx={{ minWidth: 800 }}>
+      <Box sx={{ display: 'flex', borderBottom: '2px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+        <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider' }} />
+        {days.map(day => {
+          const isToday = isSameDay(day, new Date());
+          return (
+            <Box
+              key={day.toISOString()}
+              sx={{
+                flex: 1, p: 1.5, textAlign: 'center',
+                bgcolor: isToday ? 'rgba(74,144,226,0.06)' : 'transparent',
+                borderRight: '1px solid', borderColor: 'divider',
+                '&:last-child': { borderRight: 0 },
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" display="block" fontWeight={500}
+                sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 10 }}>
+                {format(day, 'EEE', { locale: srLatn })}
+              </Typography>
+              <Typography variant="body1" fontWeight={isToday ? 800 : 500}
+                color={isToday ? 'primary.main' : 'text.primary'}
+                sx={{ fontSize: isToday ? 16 : 14 }}>
+                {format(day, 'd')}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
+
+      <Box sx={{ display: 'flex' }}>
+        <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+          {HOURS.map(hour => (
+            <Box key={hour} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'flex-start', pt: 1, px: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
+                {String(hour).padStart(2, '0')}:00
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        <Box sx={{ flex: 1, position: 'relative' }}>
+          {HOURS.map(hour => (
+            <Box key={hour} sx={{ display: 'flex', height: ROW_HEIGHT, borderBottom: '1px solid', borderColor: 'divider' }}>
+              {days.map(day => {
+                const isToday = isSameDay(day, new Date());
+                return (
+                  <Box
+                    key={day.toISOString()}
+                    onClick={() => handleSlotClick(day, hour)}
+                    sx={{
+                      flex: 1, borderRight: '1px solid', borderColor: 'divider',
+                      '&:last-child': { borderRight: 0 }, cursor: 'pointer',
+                      transition: 'background 0.1s',
+                      bgcolor: isToday ? 'rgba(74,144,226,0.02)' : 'transparent',
+                      '&:hover': { bgcolor: isToday ? 'rgba(74,144,226,0.05)' : 'action.hover' },
+                    }}
+                  />
+                );
+              })}
+            </Box>
+          ))}
+
+          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
+            {days.map((day, dayIndex) =>
+              getSessionsForDay(day).map(s => sessionCard(s, dayIndex, days.length))
+            )}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  const renderDayGrid = () => {
+    const columns = activeRooms;
+    const numCols = columns.length || 1;
+
+    return (
+      <Box sx={{ minWidth: Math.max(420, numCols * 180) }}>
+        <Box sx={{ display: 'flex', borderBottom: '2px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+          <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider' }} />
+          {columns.length === 0 ? (
+            <Box sx={{ flex: 1, p: 1.5, textAlign: 'center' }}>
+              <Typography variant="caption" color="text.secondary">Nema prostorija</Typography>
+            </Box>
+          ) : columns.map(room => (
+            <Box
+              key={room.id}
+              sx={{
+                flex: 1, p: 1.5, textAlign: 'center',
+                borderRight: '1px solid', borderColor: 'divider',
+                '&:last-child': { borderRight: 0 },
+              }}
+            >
+              <Typography variant="body2" fontWeight={600} color="text.primary">
+                {room.name}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        <Box sx={{ display: 'flex' }}>
+          <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+            {HOURS.map(hour => (
+              <Box key={hour} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'flex-start', pt: 1, px: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
+                  {String(hour).padStart(2, '0')}:00
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+
+          <Box sx={{ flex: 1, position: 'relative' }}>
+            {HOURS.map(hour => (
+              <Box key={hour} sx={{ display: 'flex', height: ROW_HEIGHT, borderBottom: '1px solid', borderColor: 'divider' }}>
+                {columns.map(room => (
+                  <Box
+                    key={room.id}
+                    onClick={() => handleSlotClick(currentDate, hour, room.id)}
+                    sx={{
+                      flex: 1, borderRight: '1px solid', borderColor: 'divider',
+                      '&:last-child': { borderRight: 0 }, cursor: 'pointer',
+                      transition: 'background 0.1s',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  />
+                ))}
+              </Box>
+            ))}
+
+            <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
+              {columns.map((room, colIndex) =>
+                getSessionsForDayAndRoom(currentDate, room.id).map(s => sessionCard(s, colIndex, numCols))
+              )}
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
+
   return (
     <Box>
-      {/* Page header */}
       <Box sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        mb: 3,
-        flexWrap: 'wrap',
-        gap: 2,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        mb: 3, flexWrap: 'wrap', gap: 2,
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 1,
-            bgcolor: 'action.selected',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: 40, height: 40, borderRadius: 1, bgcolor: 'action.selected',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <CalendarMonth sx={{ color: 'primary.main', fontSize: 22 }} />
           </Box>
           <Box>
             <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-              Nedeljni raspored
+              {pageTitle}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {sessions.length} tretmana u periodu
@@ -120,17 +319,9 @@ export default function CalendarPage() {
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Date navigation */}
           <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5,
-            bgcolor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            px: 0.5,
-            py: 0.25,
+            display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'background.paper',
+            border: '1px solid', borderColor: 'divider', borderRadius: 1, px: 0.5, py: 0.25,
           }}>
             <IconButton size="small" onClick={() => navigate('prev')}>
               <ChevronLeft sx={{ fontSize: 20 }} />
@@ -171,7 +362,6 @@ export default function CalendarPage() {
         </Box>
       </Box>
 
-      {/* Status legend */}
       <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
           <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -183,170 +373,9 @@ export default function CalendarPage() {
         ))}
       </Box>
 
-      {/* Calendar grid */}
       <Card sx={{ overflow: 'hidden' }}>
         <Box sx={{ overflowX: 'auto' }}>
-          <Box sx={{ minWidth: view === 'week' ? 800 : 420 }}>
-            {/* Header row */}
-            <Box sx={{
-              display: 'flex',
-              borderBottom: '2px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.default',
-            }}>
-              <Box sx={{
-                width: 64,
-                flexShrink: 0,
-                borderRight: '1px solid',
-                borderColor: 'divider',
-              }} />
-              {days.map(day => {
-                const isToday = isSameDay(day, new Date());
-                return (
-                  <Box
-                    key={day.toISOString()}
-                    sx={{
-                      flex: 1,
-                      p: 1.5,
-                      textAlign: 'center',
-                      bgcolor: isToday ? 'rgba(74,144,226,0.06)' : 'transparent',
-                      borderRight: '1px solid',
-                      borderColor: 'divider',
-                      '&:last-child': { borderRight: 0 },
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                      fontWeight={500}
-                      sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 10 }}
-                    >
-                      {format(day, 'EEE', { locale: srLatn })}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      fontWeight={isToday ? 800 : 500}
-                      color={isToday ? 'primary.main' : 'text.primary'}
-                      sx={{ fontSize: isToday ? 16 : 14 }}
-                    >
-                      {format(day, 'd')}
-                    </Typography>
-                  </Box>
-                );
-              })}
-            </Box>
-
-            {/* Time grid */}
-            <Box sx={{ display: 'flex' }}>
-              {/* Hour labels column */}
-              <Box sx={{
-                width: 64,
-                flexShrink: 0,
-                borderRight: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.default',
-              }}>
-                {HOURS.map(hour => (
-                  <Box key={hour} sx={{
-                    height: ROW_HEIGHT,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    pt: 1,
-                    px: 1,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  }}>
-                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
-                      {String(hour).padStart(2, '0')}:00
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-
-              {/* Days area with absolute session overlay */}
-              <Box sx={{ flex: 1, position: 'relative' }}>
-                {/* Grid rows — background lines + click handlers */}
-                {HOURS.map(hour => (
-                  <Box key={hour} sx={{ display: 'flex', height: ROW_HEIGHT, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    {days.map(day => {
-                      const isToday = isSameDay(day, new Date());
-                      return (
-                        <Box
-                          key={day.toISOString()}
-                          onClick={() => handleSlotClick(day, hour)}
-                          sx={{
-                            flex: 1,
-                            borderRight: '1px solid',
-                            borderColor: 'divider',
-                            '&:last-child': { borderRight: 0 },
-                            cursor: 'pointer',
-                            transition: 'background 0.1s',
-                            bgcolor: isToday ? 'rgba(74,144,226,0.02)' : 'transparent',
-                            '&:hover': { bgcolor: isToday ? 'rgba(74,144,226,0.05)' : 'action.hover' },
-                          }}
-                        />
-                      );
-                    })}
-                  </Box>
-                ))}
-
-                {/* Sessions — absolutely positioned, sized by duration */}
-                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
-                  {days.map((day, dayIndex) => {
-                    const daySessions = getSessionsForDay(day);
-                    const colWidth = `${100 / days.length}%`;
-                    const colLeft = `${(dayIndex / days.length) * 100}%`;
-                    return daySessions.map(s => {
-                      const sc = STATUS_CONFIG[s.status] || { bg: '#64748B', label: s.status };
-                      const top = getSessionTop(s);
-                      const height = getSessionHeight(s);
-                      return (
-                        <Tooltip
-                          key={s.id}
-                          title={`${s.patient?.firstName} ${s.patient?.lastName} · ${s.therapist?.firstName} ${s.therapist?.lastName}${s.room ? ` · ${s.room.name}` : ''} · ${s.duration}min`}
-                        >
-                          <Box
-                            onClick={(e) => handleSessionClick(s, e)}
-                            sx={{
-                              position: 'absolute',
-                              top,
-                              left: `calc(${colLeft} + 4px)`,
-                              width: `calc(${colWidth} - 8px)`,
-                              height,
-                              bgcolor: sc.bg,
-                              color: 'white',
-                              borderRadius: 1,
-                              px: '6px',
-                              py: '3px',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              pointerEvents: 'auto',
-                              opacity: s.status === 'CANCELED' ? 0.5 : 1,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              lineHeight: 1.4,
-                              zIndex: 1,
-                              boxSizing: 'border-box',
-                              transition: 'opacity 0.15s, transform 0.1s',
-                              '&:hover': {
-                                opacity: s.status === 'CANCELED' ? 0.6 : 0.88,
-                                transform: 'scale(1.01)',
-                              },
-                            }}
-                          >
-                            {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
-                          </Box>
-                        </Tooltip>
-                      );
-                    });
-                  })}
-                </Box>
-              </Box>
-            </Box>
-          </Box>
+          {view === 'week' ? renderWeekGrid() : renderDayGrid()}
         </Box>
       </Card>
 
