@@ -153,6 +153,32 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
 
     // If marking COMPLETED, delegate to service for atomic Finance + remainingSessions update
     if (status === SessionStatus.COMPLETED) {
+      const existing = await prisma.session.findUnique({ where: { id: sessionId }, select: { status: true } });
+      if (existing?.status === SessionStatus.COMPLETED) {
+        // Already completed — skip re-completion (would double-count finance/sessions); just update fields normally
+        const session = await prisma.session.update({
+          where: { id: sessionId },
+          data: {
+            patientId: patientId ? parseInt(String(patientId)) : undefined,
+            therapistId: therapistId ? parseInt(String(therapistId)) : undefined,
+            roomId: roomId !== undefined ? (roomId ? parseInt(String(roomId)) : null) : undefined,
+            date: date ? new Date(date) : undefined,
+            startTime,
+            duration: duration ? parseInt(String(duration)) : undefined,
+            treatmentType,
+            isPaid,
+            report,
+          },
+          include: {
+            patient: { select: { id: true, firstName: true, lastName: true } },
+            therapist: { select: { id: true, firstName: true, lastName: true } },
+            room: true,
+          },
+        });
+        emitEvent('sessions:updated', { action: 'updated', session });
+        res.json(session);
+        return;
+      }
       if (patientId || therapistId || roomId !== undefined || date || startTime || duration || treatmentType || isPaid !== undefined || report !== undefined) {
         await prisma.session.update({
           where: { id: sessionId },
