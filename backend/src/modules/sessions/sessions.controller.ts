@@ -142,7 +142,7 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
     const sessionId = parseInt(req.params.id);
     const { patientId, therapistId, roomId, date, startTime, duration, treatmentType, status, isPaid, report } = req.body;
 
-    if (roomId && date && startTime && duration && therapistId) {
+    if (date && startTime && duration && therapistId) {
       const [roomConflict, therapistConflict] = await Promise.all([
         checkRoomConflict(roomId, date, startTime, duration, sessionId),
         checkTherapistConflict(therapistId, date, startTime, duration, sessionId),

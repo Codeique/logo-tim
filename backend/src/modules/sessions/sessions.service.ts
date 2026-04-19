@@ -20,6 +20,7 @@ async function hasOverlap(
   const newStart = h * 60 + m;
   const newEnd = newStart + durationMin;
 
+  const safeExcludeId = excludeId ?? -1;
   const result = await prisma.$queryRaw<[{ count: bigint }]>(
     Prisma.sql`
       SELECT COUNT(*) AS count
@@ -27,8 +28,8 @@ async function hasOverlap(
       WHERE ${Prisma.raw(`"${field}"`)} = ${fieldValue}
         AND "date" = ${new Date(date)}::date
         AND "status" != 'CANCELED'
-        AND ${excludeId !== null ? Prisma.sql`"id" != ${excludeId} AND` : Prisma.sql``}
-        (
+        AND "id" != ${safeExcludeId}
+        AND (
           (EXTRACT(HOUR FROM "startTime"::time) * 60 + EXTRACT(MINUTE FROM "startTime"::time)) < ${newEnd}
           AND
           (EXTRACT(HOUR FROM "startTime"::time) * 60 + EXTRACT(MINUTE FROM "startTime"::time) + "duration") > ${newStart}
