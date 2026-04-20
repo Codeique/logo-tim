@@ -10,6 +10,7 @@ import { srLatn } from 'date-fns/locale';
 import api from '../api/axios';
 import SessionFormDialog from '../components/SessionFormDialog';
 import { SESSION_STATUS } from '../utils/statusConfig';
+import useAuthStore from '../store/authStore';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 - 20:00
 const ROW_HEIGHT = 68;
@@ -39,8 +40,25 @@ export default function CalendarPage() {
     queryFn: () => api.get('/rooms').then(r => r.data),
   });
 
+  const user = useAuthStore(s => s.user);
+  const isAdmin = user?.role === 'ADMIN';
+
+  const { data: therapistsData } = useQuery({
+    queryKey: ['therapists'],
+    queryFn: () => api.get('/therapists').then(r => r.data),
+    enabled: !isAdmin,
+  });
+
   const sessions = sessionsData?.data || [];
   const activeRooms = useMemo(() => (roomsData || []).filter(r => r.isActive), [roomsData]);
+
+  const dayViewRooms = useMemo(() => {
+    if (isAdmin) return activeRooms;
+    const myTherapist = (therapistsData || []).find(t => t.userId === user?.id);
+    if (!myTherapist) return activeRooms;
+    const myRoomIds = new Set((myTherapist.rooms || []).map(r => r.id));
+    return activeRooms.filter(r => myRoomIds.has(r.id));
+  }, [activeRooms, therapistsData, isAdmin, user?.id]);
 
   const getSessionsForDay = (day) => {
     const dayStr = format(day, 'yyyy-MM-dd');
@@ -223,7 +241,7 @@ export default function CalendarPage() {
   );
 
   const renderDayGrid = () => {
-    const columns = activeRooms;
+    const columns = dayViewRooms;
     const numCols = columns.length || 1;
 
     return (

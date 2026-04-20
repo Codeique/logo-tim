@@ -176,3 +176,13 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
     res.json({ message: 'Patient deactivated' });
   } catch (err) { next(err); }
 };
+
+export const toggleActive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const patient = await prisma.patient.findUniqueOrThrow({ where: { id: parseInt(id) }, select: { isActive: true } });
+    const updated = await prisma.patient.update({ where: { id: parseInt(id) }, data: { isActive: !patient.isActive } });
+    emitEvent('patients:updated', { action: 'updated', patient: updated });
+    res.json({ isActive: updated.isActive });
+  } catch (err) { next(err); }
+};

@@ -8,9 +8,6 @@ import {
   InputAdornment,
   IconButton,
   CircularProgress,
-  Checkbox,
-  FormControlLabel,
-  Link,
   Fade,
   Slide,
   Alert,
@@ -71,7 +68,7 @@ function LoginForm({ onSuccess }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const [form, setForm] = useState({ email: '', password: '', remember: false });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
@@ -259,7 +256,7 @@ function LoginForm({ onSuccess }) {
               ),
             }}
             sx={{
-              mb: 1,
+              mb: 3,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '10px',
                 fontSize: '0.9rem',
@@ -276,37 +273,6 @@ function LoginForm({ onSuccess }) {
               },
             }}
           />
-
-          {/* Remember me + Forgot */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={form.remember}
-                  onChange={handleChange('remember')}
-                  size="small"
-                  sx={{ '& .MuiSvgIcon-root': { fontSize: 18 } }}
-                />
-              }
-              label={
-                <Typography variant="caption" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                  Zapamti me
-                </Typography>
-              }
-            />
-            <Link
-              href="#"
-              underline="hover"
-              sx={{
-                fontSize: '0.8rem',
-                color: 'primary.main',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Zaboravili ste lozinku?
-            </Link>
-          </Box>
 
           {/* Submit */}
           <Button

@@ -33,13 +33,15 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
 
 export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Soft-delete (BUG-09 fix): avoids FK constraint errors from sessions referencing this room
-    await prisma.room.update({
-      where: { id: parseInt(req.params.id) },
-      data: { isActive: false },
-    });
+    const id = parseInt(req.params.id);
+    const sessionCount = await prisma.session.count({ where: { roomId: id } });
+    if (sessionCount > 0) {
+      res.status(409).json({ message: 'Nije moguće obrisati prostoriju koja ima zakazane tretmane' });
+      return;
+    }
+    await prisma.room.delete({ where: { id } });
     invalidateRoomCache();
-    emitEvent('rooms:updated', { action: 'deleted', id: parseInt(req.params.id) });
-    res.json({ message: 'Room deactivated' });
+    emitEvent('rooms:updated', { action: 'deleted', id });
+    res.json({ message: 'Room deleted' });
   } catch (err) { next(err); }
 };

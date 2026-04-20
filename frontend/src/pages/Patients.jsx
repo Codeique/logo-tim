@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import {
   Add, Search, Edit, Shield, People, Person, Delete,
-  HealthAndSafety, CheckCircle, Cancel, Warning,
+  HealthAndSafety, CheckCircle, Cancel, Warning, CheckCircleOutline,
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -444,7 +444,9 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           {isAdmin && (
             <Button
               size="small"
-              startIcon={<Delete sx={{ fontSize: 13 }} />}
+              startIcon={p.isActive
+                ? <Delete sx={{ fontSize: 13 }} />
+                : <CheckCircleOutline sx={{ fontSize: 13 }} />}
               onClick={(e) => { e.stopPropagation(); onDelete(p); }}
               sx={{
                 flex: 1,
@@ -452,14 +454,16 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
                 fontWeight: 600,
                 textTransform: 'none',
                 py: 0.5,
-                color: 'error.main',
+                color: p.isActive ? 'error.main' : 'success.main',
                 bgcolor: 'transparent',
                 border: '1px solid',
-                borderColor: 'rgba(239,68,68,0.45)',
-                '&:hover': { bgcolor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.75)' },
+                borderColor: p.isActive ? 'rgba(239,68,68,0.45)' : 'rgba(16,185,129,0.45)',
+                '&:hover': p.isActive
+                  ? { bgcolor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.75)' }
+                  : { bgcolor: 'rgba(16,185,129,0.06)', borderColor: 'rgba(16,185,129,0.75)' },
               }}
             >
-              Obriši
+              {p.isActive ? 'Deaktiviraj' : 'Aktiviraj'}
             </Button>
           )}
         </Box>
@@ -538,7 +542,7 @@ export default function PatientsPage() {
     if (!deletePatient) return;
     setDeleting(true);
     try {
-      await api.delete(`/patients/${deletePatient.id}`);
+      await api.patch(`/patients/${deletePatient.id}/toggle-active`);
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       setDeletePatient(null);
     } finally {
@@ -735,12 +739,17 @@ export default function PatientsPage() {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Obriši pacijenta</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+          {deletePatient?.isActive ? 'Deaktiviraj pacijenta' : 'Aktiviraj pacijenta'}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Da li ste sigurni da želite da deaktivirate pacijenta{' '}
-            <strong>{deletePatient?.firstName} {deletePatient?.lastName}</strong>?
-            Pacijent neće biti trajno obrisan.
+            {deletePatient?.isActive
+              ? <>Da li ste sigurni da želite da deaktivirate pacijenta{' '}
+                  <strong>{deletePatient?.firstName} {deletePatient?.lastName}</strong>?
+                  Pacijent neće biti trajno obrisan.</>
+              : <>Da li ste sigurni da želite da aktivirate pacijenta{' '}
+                  <strong>{deletePatient?.firstName} {deletePatient?.lastName}</strong>?</>}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
@@ -754,11 +763,11 @@ export default function PatientsPage() {
           </Button>
           <Button
             variant="outlined"
-            color="error"
+            color={deletePatient?.isActive ? 'error' : 'success'}
             onClick={handleDeleteConfirm}
             disabled={deleting}
           >
-            {deleting ? 'Brisanje...' : 'Deaktiviraj'}
+            {deleting ? '...' : deletePatient?.isActive ? 'Deaktiviraj' : 'Aktiviraj'}
           </Button>
         </DialogActions>
       </Dialog>

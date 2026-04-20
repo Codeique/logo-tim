@@ -12,5 +12,6 @@ router.get('/:id', ctrl.getById);
 router.post('/', authorize('ADMIN', 'THERAPIST'), createPatientValidation, validate, ctrl.create);
 router.put('/:id', authorize('ADMIN', 'THERAPIST'), updatePatientValidation, validate, ctrl.update);
 router.delete('/:id', authorize('ADMIN'), ctrl.remove);
+router.patch('/:id/toggle-active', authorize('ADMIN'), ctrl.toggleActive);
 
 export = router;

@@ -15,9 +15,16 @@ const EMPTY = {
   nationalId: '', insuranceHolder: '', medicalFileNumber: '', militaryPost: '',
 };
 
+const NO_ERRORS = {
+  firstName: '', lastName: '', nickname: '', birthDate: '', phone: '',
+  diagnosis: '', sessionPrice: '', therapistId: '',
+  nationalId: '', insuranceHolder: '', medicalFileNumber: '', militaryPost: '',
+};
+
 export default function PatientFormDialog({ open, onClose, patient }) {
   const qc = useQueryClient();
   const [form, setForm] = useState(EMPTY);
+  const [errors, setErrors] = useState(NO_ERRORS);
 
   useEffect(() => {
     if (patient) {
@@ -41,6 +48,7 @@ export default function PatientFormDialog({ open, onClose, patient }) {
     } else {
       setForm(EMPTY);
     }
+    setErrors(NO_ERRORS);
   }, [patient, open]);
 
   const { data: therapists = [] } = useQuery({
@@ -65,11 +73,39 @@ export default function PatientFormDialog({ open, onClose, patient }) {
     onError: (e) => toast.error(e.response?.data?.message || 'Greška'),
   });
 
-  const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
+  const set = (field) => (e) => {
+    setForm(f => ({ ...f, [field]: e.target.value }));
+    if (errors[field]) setErrors(er => ({ ...er, [field]: '' }));
+  };
   const setCheck = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.checked }));
 
+  const validate = () => {
+    const errs = { ...NO_ERRORS };
+    if (!form.firstName.trim()) errs.firstName = 'Obavezno polje';
+    if (!form.lastName.trim()) errs.lastName = 'Obavezno polje';
+    if (!form.nickname.trim()) errs.nickname = 'Obavezno polje';
+    if (!form.birthDate) errs.birthDate = 'Obavezno polje';
+    if (!form.phone.trim()) errs.phone = 'Obavezno polje';
+    if (!form.diagnosis.trim()) errs.diagnosis = 'Obavezno polje';
+    if (form.sessionPrice === '' || form.sessionPrice === null) errs.sessionPrice = 'Obavezno polje';
+    if (!form.therapistId) errs.therapistId = 'Obavezno polje';
+    if (form.isMilitary) {
+      if (!form.nationalId.trim()) errs.nationalId = 'Obavezno polje';
+      if (!form.insuranceHolder.trim()) errs.insuranceHolder = 'Obavezno polje';
+      if (!form.medicalFileNumber.trim()) errs.medicalFileNumber = 'Obavezno polje';
+      if (!form.militaryPost.trim()) errs.militaryPost = 'Obavezno polje';
+    }
+    return errs;
+  };
+
   const handleSubmit = () => {
-    if (!form.firstName || !form.lastName) return toast.error('Ime i prezime su obavezni');
+    const errs = validate();
+    const hasError = Object.values(errs).some(v => v !== '');
+    if (hasError) {
+      setErrors(errs);
+      toast.error('Popunite sva obavezna polja');
+      return;
+    }
     mutation.mutate(form);
   };
 
@@ -79,26 +115,33 @@ export default function PatientFormDialog({ open, onClose, patient }) {
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Ime *" value={form.firstName} onChange={set('firstName')} />
+            <TextField required fullWidth label="Ime" value={form.firstName} onChange={set('firstName')}
+              error={!!errors.firstName} helperText={errors.firstName} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Prezime *" value={form.lastName} onChange={set('lastName')} />
+            <TextField required fullWidth label="Prezime" value={form.lastName} onChange={set('lastName')}
+              error={!!errors.lastName} helperText={errors.lastName} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Nadimak" value={form.nickname} onChange={set('nickname')} />
+            <TextField required fullWidth label="Nadimak" value={form.nickname} onChange={set('nickname')}
+              error={!!errors.nickname} helperText={errors.nickname} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Datum rođenja" type="date" InputLabelProps={{ shrink: true }}
-              value={form.birthDate} onChange={set('birthDate')} />
+            <TextField required fullWidth label="Datum rođenja" type="date" InputLabelProps={{ shrink: true }}
+              value={form.birthDate} onChange={set('birthDate')}
+              error={!!errors.birthDate} helperText={errors.birthDate} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Telefon" value={form.phone} onChange={set('phone')} />
+            <TextField required fullWidth label="Telefon" value={form.phone} onChange={set('phone')}
+              error={!!errors.phone} helperText={errors.phone} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Cena tretmana (RSD)" type="number" value={form.sessionPrice} onChange={set('sessionPrice')} />
+            <TextField required fullWidth label="Cena tretmana (RSD)" type="number" value={form.sessionPrice} onChange={set('sessionPrice')}
+              error={!!errors.sessionPrice} helperText={errors.sessionPrice} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth select label="Dodeljeni logoped" value={form.therapistId} onChange={set('therapistId')}>
+            <TextField required fullWidth select label="Dodeljeni logoped" value={form.therapistId} onChange={set('therapistId')}
+              error={!!errors.therapistId} helperText={errors.therapistId}>
               <MenuItem value="">Niko</MenuItem>
               {(therapists || []).map(t => (
                 <MenuItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</MenuItem>
@@ -106,14 +149,14 @@ export default function PatientFormDialog({ open, onClose, patient }) {
             </TextField>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Dijagnoza" value={form.diagnosis} onChange={set('diagnosis')} />
+            <TextField required fullWidth label="Dijagnoza" value={form.diagnosis} onChange={set('diagnosis')}
+              error={!!errors.diagnosis} helperText={errors.diagnosis} />
           </Grid>
           <Grid item xs={12}>
             <TextField fullWidth multiline rows={2} label="Napomene" value={form.notes} onChange={set('notes')} />
           </Grid>
           <Grid item xs={12}>
             <Box sx={{ display: 'flex', gap: 3 }}>
-              <FormControlLabel control={<Switch checked={form.isActive} onChange={setCheck('isActive')} />} label="Aktivan" />
               <FormControlLabel control={<Switch checked={form.isMilitary} onChange={setCheck('isMilitary')} color="warning" />} label="Vojni osiguranik" />
             </Box>
           </Grid>
@@ -122,16 +165,20 @@ export default function PatientFormDialog({ open, onClose, patient }) {
             <>
               <Grid item xs={12}><Divider><Typography variant="caption">Vojni podaci</Typography></Divider></Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Matični broj" value={form.nationalId} onChange={set('nationalId')} />
+                <TextField required fullWidth label="Matični broj" value={form.nationalId} onChange={set('nationalId')}
+                  error={!!errors.nationalId} helperText={errors.nationalId} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Nosač osiguranja" value={form.insuranceHolder} onChange={set('insuranceHolder')} />
+                <TextField required fullWidth label="Nosač osiguranja" value={form.insuranceHolder} onChange={set('insuranceHolder')}
+                  error={!!errors.insuranceHolder} helperText={errors.insuranceHolder} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Broj kartona" value={form.medicalFileNumber} onChange={set('medicalFileNumber')} />
+                <TextField required fullWidth label="Broj kartona" value={form.medicalFileNumber} onChange={set('medicalFileNumber')}
+                  error={!!errors.medicalFileNumber} helperText={errors.medicalFileNumber} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Vojni pošt." value={form.militaryPost} onChange={set('militaryPost')} />
+                <TextField required fullWidth label="Vojni pošt." value={form.militaryPost} onChange={set('militaryPost')}
+                  error={!!errors.militaryPost} helperText={errors.militaryPost} />
               </Grid>
             </>
           )}
