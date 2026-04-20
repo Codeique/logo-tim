@@ -89,6 +89,46 @@ export default function CalendarPage() {
     return Math.max((duration / 60) * ROW_HEIGHT, 22);
   };
 
+  const getTimeMinutes = (session) => {
+    const [h, m] = (session.startTime || '00:00').split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const sessionOverlaps = (a, b) => {
+    const aStart = getTimeMinutes(a);
+    const bStart = getTimeMinutes(b);
+    return aStart < bStart + (b.duration || 60) && bStart < aStart + (a.duration || 60);
+  };
+
+  const layoutSessions = (sessions) => {
+    if (!sessions.length) return [];
+    const sorted = [...sessions].sort((a, b) => getTimeMinutes(a) - getTimeMinutes(b));
+    const cols = [];
+    const assignments = new Map();
+    for (const s of sorted) {
+      const sStart = getTimeMinutes(s);
+      let placed = false;
+      for (let c = 0; c < cols.length; c++) {
+        const last = cols[c][cols[c].length - 1];
+        if (sStart >= getTimeMinutes(last) + (last.duration || 60)) {
+          cols[c].push(s);
+          assignments.set(s, c);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        assignments.set(s, cols.length);
+        cols.push([s]);
+      }
+    }
+    return sorted.map(s => ({
+      session: s,
+      subCol: assignments.get(s),
+      subNumCols: cols.filter(col => col.some(other => sessionOverlaps(s, other))).length,
+    }));
+  };
+
   const handleSlotClick = (day, hour, roomId = null) => {
     const slot = {
       date: format(day, 'yyyy-MM-dd'),
@@ -121,10 +161,11 @@ export default function CalendarPage() {
 
   const pageTitle = view === 'week' ? 'Nedeljni raspored' : 'Dnevni raspored';
 
-  const sessionCard = (s, colIndex, numCols) => {
+  const sessionCard = (s, outerCol, outerNumCols, subCol = 0, subNumCols = 1) => {
     const sc = SESSION_STATUS[s.status] || { bg: '#64748B', label: s.status };
-    const colWidth = `${100 / numCols}%`;
-    const colLeft = `${(colIndex / numCols) * 100}%`;
+    const outerWidthPct = 100 / outerNumCols;
+    const subWidthPct = outerWidthPct / subNumCols;
+    const leftPct = outerCol * outerWidthPct + subCol * subWidthPct;
     return (
       <Tooltip
         key={s.id}
@@ -135,8 +176,8 @@ export default function CalendarPage() {
           sx={{
             position: 'absolute',
             top: getSessionTop(s),
-            left: `calc(${colLeft} + 4px)`,
-            width: `calc(${colWidth} - 8px)`,
+            left: `calc(${leftPct}% + 2px)`,
+            width: `calc(${subWidthPct}% - 4px)`,
             height: getSessionHeight(s),
             bgcolor: sc.bg,
             color: 'white',
@@ -170,7 +211,7 @@ export default function CalendarPage() {
   const renderWeekGrid = () => (
     <Box sx={{ minWidth: 800 }}>
       <Box sx={{ display: 'flex', borderBottom: '2px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
-        <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider' }} />
+        <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.default' }} />
         {days.map(day => {
           const isToday = isSameDay(day, new Date());
           return (
@@ -198,7 +239,7 @@ export default function CalendarPage() {
       </Box>
 
       <Box sx={{ display: 'flex' }}>
-        <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+        <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.default', position: 'sticky', left: 0, zIndex: 2 }}>
           {HOURS.map(hour => (
             <Box key={hour} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'flex-start', pt: 1, px: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
               <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
@@ -232,7 +273,9 @@ export default function CalendarPage() {
 
           <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
             {days.map((day, dayIndex) =>
-              getSessionsForDay(day).map(s => sessionCard(s, dayIndex, days.length))
+              layoutSessions(getSessionsForDay(day)).map(({ session: s, subCol, subNumCols }) =>
+                sessionCard(s, dayIndex, days.length, subCol, subNumCols)
+              )
             )}
           </Box>
         </Box>
@@ -247,7 +290,7 @@ export default function CalendarPage() {
     return (
       <Box sx={{ minWidth: Math.max(420, numCols * 180) }}>
         <Box sx={{ display: 'flex', borderBottom: '2px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
-          <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider' }} />
+          <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.default' }} />
           {columns.length === 0 ? (
             <Box sx={{ flex: 1, p: 1.5, textAlign: 'center' }}>
               <Typography variant="caption" color="text.secondary">Nema prostorija</Typography>
@@ -269,7 +312,7 @@ export default function CalendarPage() {
         </Box>
 
         <Box sx={{ display: 'flex' }}>
-          <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+          <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.default', position: 'sticky', left: 0, zIndex: 2 }}>
             {HOURS.map(hour => (
               <Box key={hour} sx={{ height: ROW_HEIGHT, display: 'flex', alignItems: 'flex-start', pt: 1, px: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11, fontWeight: 500 }}>
@@ -299,7 +342,9 @@ export default function CalendarPage() {
 
             <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
               {columns.map((room, colIndex) =>
-                getSessionsForDayAndRoom(currentDate, room.id).map(s => sessionCard(s, colIndex, numCols))
+                layoutSessions(getSessionsForDayAndRoom(currentDate, room.id)).map(({ session: s, subCol, subNumCols }) =>
+                  sessionCard(s, colIndex, numCols, subCol, subNumCols)
+                )
               )}
             </Box>
           </Box>

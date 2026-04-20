@@ -12,12 +12,9 @@ import PatientsPage from './pages/Patients';
 import PatientDetailPage from './pages/PatientDetail';
 import TherapistsPage from './pages/Therapists';
 import RoomsPage from './pages/Rooms';
-import SessionsPage from './pages/Sessions';
 import CalendarPage from './pages/Calendar';
 import FinancePage from './pages/Finance';
 import TransactionsPage from './pages/Transactions';
-import MilitaryRequestsPage from './pages/MilitaryRequests';
-import AuditLogsPage from './pages/AuditLogs';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, accessToken } = useAuthStore();
@@ -55,12 +52,9 @@ export default function App() {
           <Route path="patients/:id" element={<PatientDetailPage />} />
           <Route path="therapists" element={<ProtectedRoute roles={['ADMIN']}><TherapistsPage /></ProtectedRoute>} />
           <Route path="rooms" element={<ProtectedRoute roles={['ADMIN']}><RoomsPage /></ProtectedRoute>} />
-          {/* <Route path="sessions" element={<SessionsPage />} /> */}
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="finance" element={<ProtectedRoute roles={['ADMIN','THERAPIST']}><FinancePage /></ProtectedRoute>} />
           <Route path="transactions" element={<TransactionsPage />} />
-          {/* <Route path="military-requests" element={<MilitaryRequestsPage />} /> */}
-          {/* <Route path="audit-logs" element={<ProtectedRoute roles={['ADMIN']}><AuditLogsPage /></ProtectedRoute>} /> */}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

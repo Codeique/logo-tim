@@ -6,8 +6,8 @@ import {
   Avatar, Divider, Tooltip, useTheme, useMediaQuery,
 } from '@mui/material';
 import {
-  Dashboard, People, Person, MeetingRoom, EventNote, CalendarMonth,
-  AccountBalance, Receipt, Shield, Assessment, Menu as MenuIcon,
+  Dashboard, People, Person, MeetingRoom, CalendarMonth,
+  AccountBalance, Receipt, Menu as MenuIcon,
   Brightness4, Brightness7, Logout,
 } from '@mui/icons-material';
 import useAuthStore from '../store/authStore';
@@ -21,11 +21,8 @@ const navItems = [
   { label: 'Logopedi', path: '/therapists', icon: Person, roles: ['ADMIN'] },
   { label: 'Prostorije', path: '/rooms', icon: MeetingRoom, roles: ['ADMIN'] },
   { label: 'Nedeljni/Dnevni raspored', path: '/calendar', icon: CalendarMonth, roles: ['ADMIN', 'THERAPIST'] },
-  // { label: 'Tretmani', path: '/sessions', icon: EventNote, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
   { label: 'Transakcije', path: '/transactions', icon: Receipt, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
   { label: 'Finansije', path: '/finance', icon: AccountBalance, roles: ['ADMIN', 'THERAPIST'] },
-  // { label: 'Vojni zahtevi', path: '/military-requests', icon: Shield, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
-  // { label: 'Revizija', path: '/audit-logs', icon: Assessment, roles: ['ADMIN'] },
 ];
 
 export default function Layout({ onToggleTheme, mode }) {
