@@ -76,7 +76,7 @@ function LoginForm({ onSuccess }) {
   const mutation = useMutation({
     mutationFn: (data) => api.post('/auth/login', data).then((r) => r.data),
     onSuccess: (data) => {
-      setAuth(data.user, data.accessToken, data.refreshToken);
+      setAuth(data.user, data.accessToken);
       navigate('/');
     },
     onError: (err) => {

@@ -9,6 +9,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import client from 'prom-client';
 
+import cookieParser from 'cookie-parser';
 import { initSocket } from './socket';
 import errorHandler from './middleware/errorHandler';
 import logger from './lib/logger';
@@ -50,6 +51,7 @@ app.use(cors({
   origin: env.FRONTEND_URL,
   credentials: true,
 }));
+app.use(cookieParser());
 app.use(express.json());
 
 // Request ID for log correlation — must come before HTTP logger

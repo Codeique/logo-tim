@@ -5,6 +5,3 @@ export const loginValidation = [
   body('password').notEmpty().withMessage('Password required'),
 ];
 
-export const refreshValidation = [
-  body('refreshToken').notEmpty().withMessage('Refresh token required'),
-];

@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
+import axios from 'axios';
 import getTheme from './theme';
 import useAuthStore from './store/authStore';
 import { useSocket } from './hooks/useSocket';
@@ -25,14 +26,35 @@ const ProtectedRoute = ({ children, roles }) => {
 
 export default function App() {
   const [mode, setMode] = useState(() => localStorage.getItem('themeMode') || 'light');
+  const [initializing, setInitializing] = useState(true);
   const theme = useMemo(() => getTheme(mode), [mode]);
   useSocket();
+
+  useEffect(() => {
+    const { accessToken, setAuth, logout } = useAuthStore.getState();
+    if (accessToken) { setInitializing(false); return; }
+    axios.post('/api/auth/refresh', {}, { withCredentials: true })
+      .then(({ data }) => setAuth(data.user, data.accessToken))
+      .catch(() => logout())
+      .finally(() => setInitializing(false));
+  }, []);
 
   const toggleMode = () => {
     const next = mode === 'light' ? 'dark' : 'light';
     setMode(next);
     localStorage.setItem('themeMode', next);
   };
+
+  if (initializing) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <CircularProgress />
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
