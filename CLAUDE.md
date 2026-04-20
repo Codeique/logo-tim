@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LogoTim is a therapy center management system (speech therapy / logopedics). It's a fullstack monorepo with a React frontend and Node.js/Express backend, using PostgreSQL via Prisma ORM.
+LogoTim is a therapy center management system (speech therapy / logopedics). Fullstack monorepo: React 18 + Vite frontend, Node.js/Express backend, PostgreSQL via Prisma ORM, Socket.io for real-time updates.
 
 ## Development Commands
 
@@ -15,7 +15,7 @@ npm run build        # Compile TypeScript → dist/
 npm start            # Start compiled dist/index.js (production)
 npm run db:push      # Push schema changes to DB (no migration history)
 npm run db:migrate   # Create and apply a migration (use for production changes)
-npm run db:seed      # Seed demo data (tsx prisma/seed.ts)
+npm run db:seed      # Seed demo data (node prisma/seed.js)
 npm run db:studio    # Open Prisma Studio GUI
 ```
 
@@ -26,10 +26,9 @@ npm run build        # Production build
 npm run preview      # Preview production build
 ```
 
-### Docker (full stack)
+### Docker (DB only)
 ```bash
-docker-compose up --build -d
-docker-compose exec backend npm run db:seed
+docker-compose up -d          # Starts PostgreSQL 16 only; backend/frontend run locally
 docker-compose down
 ```
 
@@ -42,65 +41,78 @@ cp .env.example backend/.env
 ## Architecture
 
 ### Backend (`backend/src/`)
-The backend is **TypeScript** (compiled to `dist/` via `tsc`, run with `tsx watch` in dev). CommonJS output (`"module": "commonjs"` in tsconfig).
+TypeScript compiled to CommonJS (`"module": "commonjs"` in tsconfig), run with `tsx watch` in dev.
 
-- **`index.ts`** — Express app entry point; mounts all routes, middleware, and initializes Socket.io
-- **`socket.ts`** — Socket.io singleton; exposes `emitEvent(event, data)` called from controllers after mutations
-- **`config/env.ts`** — Startup env validation + exports typed constants (`PORT`, `JWT_SECRET`, etc.)
-- **`lib/prisma.ts`** — Singleton `PrismaClient` (one instance for the entire process)
-- **`lib/logger.ts`** — Singleton winston logger (JSON in production, colorized in dev)
-- **`middleware/auth.ts`** — `authenticate` (JWT Bearer verification) and `authorize(...roles)` (RBAC) middleware
-- **`middleware/audit.ts`** — Wraps `res.json` to fire-and-forget audit log writes to `AuditLog` table
-- **`middleware/errorHandler.ts`** — Handles Prisma errors (P2002→409, P2025→404) and generic 500s
-- **`middleware/validate.ts`** — Runs `validationResult` from express-validator, returns 422 on failure
-- **`lib/roles.ts`** — `isTherapistRole(role)` helper; use instead of inline `[Role.THERAPIST, Role.CHIEF_THERAPIST].includes()` (TypeScript rejects the array form under strict mode)
-- **`lib/pagination.ts`** — `parsePagination(query, maxLimit?)` returns `{ skip, take, page, limit }` with page=0 guard; use in all paginated list controllers
-- **`lib/profileCache.ts`** — LRU cache for `userId → therapist/patient profile ID` (5 min TTL); use `getTherapistId(userId)` / `getPatientId(userId)` instead of inline `prisma.therapist.findUnique`
-- **`lib/listCache.ts`** — LRU cache for room and therapist lists (60s TTL); use `getCachedRooms()` / `getCachedTherapists()` and invalidate on mutations
-- **`modules/`** — 12 domain modules, each with `*.routes.ts`, `*.controller.ts`, and optionally `*.service.ts`; all write endpoints have `*.validation.ts`
-- **`types/express.d.ts`** — Global augmentation: `req.user: { id: number; role: Role }`
+- **`index.ts`** — Express app entry; middleware order: helmet → compression → cors → cookieParser → express.json → requestId → logging/metrics → rate limiters → routes → health/ready/metrics → errorHandler
+- **`socket.ts`** — Socket.io singleton; `emitEvent(event, data)` broadcasts to all connected clients
+- **`config/env.ts`** — Startup env validation + typed constants
+- **`middleware/auth.ts`** — `authenticate` (JWT Bearer) + `authorize(...roles)` (RBAC, 403 on failure)
+- **`middleware/audit.ts`** — Monkey-patches `res.json` to fire-and-forget `AuditLog` writes on 2xx; has 2 intentional casts — do not add more casts elsewhere
+- **`middleware/errorHandler.ts`** — Prisma error mapping: P2002→409, P2003→409, P2025→404; generic 500s
+- **`middleware/validate.ts`** — Runs `validationResult`, returns 422 with errors array
+- **`lib/roles.ts`** — `isTherapistRole(role)` matches both `THERAPIST` and `CHIEF_THERAPIST`; use this instead of any inline comparison
+- **`lib/pagination.ts`** — `parsePagination(query, maxLimit?)` → `{ skip, take, page, limit }`; guards page=0; use in all paginated list controllers
+- **`lib/profileCache.ts`** — LRU (5 min TTL, max 500): `getTherapistId(userId)` / `getPatientId(userId)` → profile ID; call invalidate functions after mutations
+- **`lib/listCache.ts`** — LRU (60s TTL): `getCachedRooms()` / `getCachedTherapists()`; call invalidate functions after mutations
+- **`types/express.d.ts`** — Augments `req.user: { id: number; role: Role }` and `req.requestId: string`
+
+### Backend Modules (`backend/src/modules/`)
+13 modules, each with `*.routes.ts` + `*.controller.ts`; write endpoints add `*.validation.ts`; complex logic adds `*.service.ts`.
+
+| Module | Key routes |
+|--------|-----------|
+| `auth` | POST /login, /refresh, /logout; GET /me |
+| `users` | GET /; POST /change-password |
+| `patients` | GET /, /me, /:id; POST /; PUT /:id; DELETE /:id; PATCH /:id/toggle-active |
+| `therapists` | GET /, /:id; POST /; PUT /:id; DELETE /:id |
+| `rooms` | GET /; POST /; PUT /:id; DELETE /:id |
+| `sessions` | GET /treatment-types, /, /:id; POST /; PUT /:id; DELETE /:id |
+| `transactions` | GET /; POST / |
+| `evaluations` | GET /; POST /; PUT /:id; DELETE /:id |
+| `militaryRequests` | GET /; POST /; PUT /:id; DELETE /:id |
+| `finance` | GET / |
+| `travelOrders` | GET /generate (PDF via PDFKit, rate-limited 5/min) |
+| `auditLogs` | GET / (ADMIN only) |
 
 ### Frontend (`frontend/src/`)
-- **`api/axios.js`** — Axios instance with base `/api`, auto-attaches JWT access token from Zustand store, and auto-refreshes via `/api/auth/refresh` on 401
-- **`store/authStore.js`** — Zustand store (persisted to localStorage as `auth-storage`) holding `user`, `accessToken`, `refreshToken`
-- **`hooks/useSocket.js`** — Singleton Socket.io client; listens to server events and calls `queryClient.invalidateQueries` to keep React Query caches fresh
-- **`App.jsx`** — Route tree with `ProtectedRoute` component for auth + role guards
-- **`pages/`** — One file per page; data fetching via React Query, mutations via axios
-- **`components/`** — Shared UI components (Layout, etc.)
-- **`theme.js`** — MUI theme factory supporting light/dark mode (toggled via localStorage `themeMode`)
+- **`api/axios.js`** — Axios instance, base `/api`, auto-attaches JWT from Zustand, auto-refreshes on 401
+- **`store/authStore.js`** — Zustand store persisted to `localStorage` as `auth-storage`; holds `{ user, accessToken }`
+- **`hooks/useSocket.js`** — Singleton Socket.io client; on each `*:updated` event calls `queryClient.invalidateQueries`
+- **`App.jsx`** — Route tree; `ProtectedRoute` checks `accessToken` + optional `roles` prop
+- **`pages/`** — One file per page; React Query for fetches, axios for mutations
+- **`components/`** — Shared dialogs: `SessionFormDialog`, `PatientFormDialog`, `TherapistFormDialog`, `MilitaryRequestDialog`, `AddTransactionDialog`, `AddEvaluationDialog`; plus `Layout`
+- **`theme.js`** — MUI theme factory; mode toggled via `localStorage` key `themeMode`
 
-### Data Flow Pattern
-1. User action → React Query mutation → `api` axios instance → Express route
-2. Controller → Prisma → DB, then `emitEvent(event)` → Socket.io broadcast
-3. All clients → `useSocket` → `queryClient.invalidateQueries` → stale React Query data refetches
+### Data Flow
+1. User action → React Query mutation → `api` axios → Express route
+2. Controller → Prisma → DB, then `emitEvent(event, data)` → Socket.io broadcast
+3. All clients → `useSocket` → `queryClient.invalidateQueries` → React Query refetches
 
 ### Auth Flow
-- Login returns `accessToken` (short-lived JWT) + `refreshToken` (long-lived)
-- Both stored in Zustand persisted store
-- Axios interceptor silently refreshes on 401 before retrying the failed request
+- Login returns `accessToken` (short-lived) + sets `refreshToken` as HttpOnly cookie
+- `accessToken` stored in Zustand; axios interceptor auto-refreshes on 401 before retrying
 
 ### Database Schema Key Points
-- `User` is the auth entity; `Therapist` and `Patient` are profiles linked 1:1 to `User` (nullable for patients without portal access)
-- `Session` links Patient + Therapist + Room; has conflict-checking on create
-- `Finance` is derived (one record per completed Session) tracking therapist earnings vs. company income
-- Military patients have `isMilitary: true` + `MilitaryRequest` records with session allowances
-- `AuditLog` captures old/new JSON values for admin review
+- `User` is the auth entity; `Therapist` and `Patient` are profiles linked 1:1 via `userId` (nullable — patients can exist without portal access)
+- `Session` links Patient + Therapist + optional Room; conflict-checking on create/update
+- `Finance` is one record per completed `Session` — tracks `therapistEarning` vs `companyIncome`
+- Military patients: `isMilitary: true` + `MilitaryRequest` records (session allowances with `validFrom`/`validUntil`)
+- `AuditLog` stores old/new JSON snapshots; `patients.controller.ts` writes it manually to capture `oldValue` before update
 
-### Roles
-- `ADMIN` — full access
-- `THERAPIST` / `CHIEF_THERAPIST` — own patients/sessions/finance
-- `PATIENT` — self-service view only
+### Roles & Access
+- `ADMIN` — full access to everything
+- `THERAPIST` / `CHIEF_THERAPIST` — see all patients; calendar shows sessions in their assigned rooms (not just own sessions); finance shows own earnings only; no access to Transactions page
+- `PATIENT` — dashboard shows own profile only (PatientDashboard component in Dashboard.jsx); no other pages visible
 
 ## Key Conventions
-- Backend is TypeScript compiled to CommonJS; frontend uses ES modules (`import`/`export`)
-- Prisma `Decimal` fields (hourlyRate, sessionPrice, accountBalance) use `.toNumber()` — not `parseFloat()`
-- All multi-step writes (session completion, payments) go through service functions using `prisma.$transaction`
-- After any write operation, controllers call `emitEvent` with the appropriate event name (e.g., `sessions:updated`)
-- Role scoping: use `isTherapistRole(req.user.role)` from `lib/roles.ts` — never `role === 'THERAPIST'` (misses CHIEF_THERAPIST) and never the array form (TypeScript strict rejects it)
-- Route guards: use `authorize(Role.ADMIN, Role.THERAPIST)` — `authorize()` accepts `Role[]` type-checked against the Prisma enum; string literals also work but the enum is preferred
+- Prisma `Decimal` fields (`hourlyRate`, `sessionPrice`, `accountBalance`) → use `.toNumber()`, not `parseFloat()`
+- Multi-step writes (session completion, payments) → `prisma.$transaction` in service files
+- Always call `emitEvent` after any write; event names: `patients:updated`, `sessions:updated`, `rooms:updated`, `therapists:updated`, `transactions:updated`, `evaluations:updated`, `militaryRequests:updated`, `finance:updated`
+- Role scoping: `isTherapistRole(req.user.role)` from `lib/roles.ts` — never `role === 'THERAPIST'` (misses CHIEF_THERAPIST); never the array form (TypeScript strict rejects it)
+- Route guards: `authorize(Role.ADMIN, Role.THERAPIST)` — Prisma enum preferred over string literals
 - `Transaction.type` is a `TransactionType` Prisma enum (PAYMENT | REFUND | ADJUSTMENT) — not a raw string
-- Rate limiting: `/api/auth` at 20 req/15min; all `/api` at 300 req/15min; `/api/travel-orders/generate` at 5 req/min
-- Health endpoints: `GET /health` (liveness, no DB), `GET /ready` (readiness + DB ping), `GET /metrics` (Prometheus)
-- `prisma db push` is used in development and Docker (no migration files); use `prisma migrate dev` when migration history is needed — schema changes to `Transaction.type` enum require a migration before deploying to production
-- `audit.ts` monkey-patches `res.json` with 2 intentional casts (binding + Prisma.InputJsonValue); all other casts in the codebase are avoidable and should not be added
-- `MilitaryRequest.status` in the DB is not authoritative — always computed via `computeStatus(validFrom, validUntil)` on read; do not query the DB column directly
+- `MilitaryRequest.status` in DB is not authoritative — always compute via `computeStatus(validFrom, validUntil)` on read; never query the DB column directly
+- Rate limits: `/api/auth` 20 req/15min; `/api` 300 req/15min; `/api/travel-orders/generate` 5 req/min
+- Health endpoints: `GET /health` (liveness, no DB), `GET /ready` (DB ping), `GET /metrics` (Prometheus)
+- `db push` for dev/Docker; `prisma migrate dev` when migration history matters — enum changes require a migration before production deploy
+- `/patients/me` must be registered before `/:id` in routes.ts to prevent Express treating "me" as a numeric ID param

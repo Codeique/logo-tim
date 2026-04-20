@@ -57,23 +57,16 @@ App runs at: http://localhost:5173
 
 ---
 
-## Docker (Production)
+## Docker (Database)
+
+The `docker-compose.yml` starts **PostgreSQL 16 only**. Backend and frontend run locally.
 
 ```bash
-# Build and start all services
-docker-compose up --build -d
-
-# Run seed data
-docker-compose exec backend node prisma/seed.js
-
-# View logs
-docker-compose logs -f backend
-
-# Stop
-docker-compose down
+docker-compose up -d      # Start PostgreSQL
+docker-compose down       # Stop
 ```
 
-App runs at: http://localhost
+To run the full stack on a server, deploy backend and frontend as separate processes or containers pointed at the Postgres instance.
 
 ---
 
@@ -117,6 +110,7 @@ Seeds:
 | GET    | /api/auth/me              | Current user                    |
 | GET    | /api/patients             | List patients (paginated)       |
 | POST   | /api/patients             | Create patient                  |
+| GET    | /api/patients/me          | Own patient profile (PATIENT)   |
 | GET    | /api/patients/:id         | Patient detail with relations   |
 | PUT    | /api/patients/:id         | Update patient                  |
 | GET    | /api/therapists           | List therapists                 |
@@ -140,17 +134,18 @@ Seeds:
 
 ## Roles & Permissions
 
-| Feature              | Admin | Therapist | Patient |
-|----------------------|-------|-----------|---------|
-| All patients         | ✓     | Own only  | Self    |
-| All therapists       | ✓     | —         | —       |
-| Rooms management     | ✓     | —         | —       |
-| Calendar             | ✓     | ✓         | —       |
-| Sessions             | ✓     | Own       | Own     |
-| Transactions         | ✓     | ✓ (add)   | View    |
-| Finance              | ✓     | Own       | —       |
-| Military requests    | ✓     | ✓         | View    |
-| Audit logs           | ✓     | —         | —       |
+| Feature              | Admin | Therapist               | Patient      |
+|----------------------|-------|-------------------------|--------------|
+| All patients         | ✓     | ✓ (all)                 | Self only    |
+| All therapists       | ✓     | —                       | —            |
+| Rooms management     | ✓     | —                       | —            |
+| Calendar             | ✓     | Room sessions (own rooms)| —           |
+| Sessions             | ✓     | Own + room occupancy    | Own          |
+| Transactions page    | ✓     | —                       | —            |
+| Finance              | ✓     | Own earnings only       | —            |
+| Military requests    | ✓     | ✓                       | View         |
+| Audit logs           | ✓     | —                       | —            |
+| Dashboard            | ✓     | ✓                       | Profile only |
 
 ---
 
@@ -175,25 +170,26 @@ Frontend subscribes via `useSocket` hook and invalidates React Query caches auto
 ### VPS / Cloud VM
 
 ```bash
-# 1. Install Docker & Docker Compose
-curl -fsSL https://get.docker.com | sh
+# 1. Install Node.js 20+, PostgreSQL, and optionally Docker
 
 # 2. Clone repo
 git clone <repo> /opt/logotim && cd /opt/logotim
 
 # 3. Configure environment
 cp .env.example backend/.env
-# Edit backend/.env with production values
+# Edit backend/.env with production values (DATABASE_URL, JWT secrets, NODE_ENV=production)
 
-# 4. Deploy
-docker-compose up --build -d
+# 4. Start database (or use a managed PostgreSQL service)
+docker-compose up -d   # starts PostgreSQL only
 
-# 5. Seed database
-docker-compose exec backend node prisma/seed.js
+# 5. Install and build
+cd backend && npm install && npm run build && npx prisma db push && node prisma/seed.js
+cd ../frontend && npm install && npm run build
 
-# 6. Set up nginx reverse proxy (optional, if using domain)
-# Point domain to server IP
-# Configure SSL with certbot
+# 6. Serve
+# Backend: node dist/index.js (or use pm2/systemd)
+# Frontend: serve -s dist, or point nginx at the dist/ folder
+# Configure nginx reverse proxy + SSL (certbot) for production
 ```
 
 ### Environment Security Checklist
