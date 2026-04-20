@@ -70,7 +70,6 @@ function MilitaryStatusBox({ activeRequest }) {
   const isExpiring = daysLeft <= 5;
   const totalSessions = activeRequest.totalSessions ?? 0;
   const usedSessions = activeRequest.usedSessions ?? 0;
-  const remaining = totalSessions - usedSessions;
   const expiryDate = format(new Date(activeRequest.validUntil), 'dd.MM.yyyy');
 
   return (
@@ -101,7 +100,7 @@ function MilitaryStatusBox({ activeRequest }) {
         color: isExpiring ? 'warning.dark' : 'success.dark',
         lineHeight: 1.3,
       }}>
-        {remaining}/{totalSessions} preostalo
+        {usedSessions} / {totalSessions} iskorišćeno
       </Typography>
       <Typography sx={{
         fontSize: '0.7rem',

@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, AppBar, Toolbar, Typography, IconButton,
   List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  Avatar, Divider, Tooltip, useTheme, useMediaQuery,
+  Divider, Tooltip, useTheme, useMediaQuery,
 } from '@mui/material';
 import {
   Dashboard, People, Person, MeetingRoom, CalendarMonth,
@@ -41,8 +41,6 @@ export default function Layout({ onToggleTheme, mode }) {
 
   const visibleNav = navItems.filter(n => n.roles.includes(user?.role));
 
-  const displayName = user?.email?.split('@')[0] || '';
-  const initials = displayName?.[0]?.toUpperCase() || '?';
 
   const isDark = mode === 'dark';
   const activeBg = isDark ? 'rgba(74,144,226,0.14)' : 'rgba(74,144,226,0.08)';
@@ -139,57 +137,50 @@ export default function Layout({ onToggleTheme, mode }) {
 
       {/* Bottom user section */}
       <Divider sx={{ borderColor: 'divider' }} />
-      <Box sx={{ p: 1.5 }}>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          p: 1.5,
-          borderRadius: 1,
-          bgcolor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
-          border: '1px solid',
-          borderColor: 'divider',
-          mb: 1,
-        }}>
-          <Avatar sx={{
-            width: 34,
-            height: 34,
-            bgcolor: 'primary.main',
-            fontSize: 13,
-            fontWeight: 700,
-            flexShrink: 0,
-          }}>
-            {initials}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={600} noWrap sx={{ fontSize: 13 }}>
-              {displayName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 11 }}>
-              {user?.role === 'ADMIN' ? 'Administrator' : user?.role === 'CHIEF_THERAPIST' ? 'Glavni logoped' : user?.role === 'THERAPIST' ? 'Logoped' : 'Pacijent'}
-            </Typography>
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-          <Tooltip title={mode === 'light' ? 'Tamni način' : 'Svetli način'}>
-            <IconButton
-              size="small"
-              onClick={onToggleTheme}
-              sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
-            >
-              {mode === 'dark' ? <Brightness7 sx={{ fontSize: 18 }} /> : <Brightness4 sx={{ fontSize: 18 }} />}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Odjavi se">
-            <IconButton
-              size="small"
-              onClick={handleLogout}
-              sx={{ color: 'error.main', '&:hover': { bgcolor: 'error.light' } }}
-            >
-              <Logout sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
+      <Box sx={{ p: 1.5, display: 'flex', gap: 1 }}>
+        <Tooltip title={mode === 'light' ? 'Tamni način' : 'Svetli način'} placement="top">
+          <IconButton
+            onClick={onToggleTheme}
+            sx={{
+              flex: 1,
+              borderRadius: 1,
+              py: 0.875,
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'text.secondary',
+              bgcolor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
+              '&:hover': {
+                bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                color: 'text.primary',
+                borderColor: 'text.disabled',
+              },
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {mode === 'dark' ? <Brightness7 sx={{ fontSize: 18 }} /> : <Brightness4 sx={{ fontSize: 18 }} />}
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Odjavi se" placement="top">
+          <IconButton
+            onClick={handleLogout}
+            sx={{
+              flex: 1,
+              borderRadius: 1,
+              py: 0.875,
+              border: '1px solid',
+              borderColor: 'rgba(239,68,68,0.3)',
+              color: 'error.main',
+              bgcolor: 'rgba(239,68,68,0.04)',
+              '&:hover': {
+                bgcolor: 'rgba(239,68,68,0.1)',
+                borderColor: 'error.main',
+              },
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Logout sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Box>
   );
