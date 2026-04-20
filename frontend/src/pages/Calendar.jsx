@@ -190,19 +190,32 @@ export default function CalendarPage() {
             pointerEvents: 'auto',
             opacity: s.status === 'CANCELED' ? 0.5 : 1,
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
             lineHeight: 1.4,
             zIndex: 1,
             boxSizing: 'border-box',
             transition: 'opacity 0.15s, transform 0.1s',
+            borderLeft: s.status === 'COMPLETED' && !s.isPaid ? '3px solid #F59E0B' : undefined,
             '&:hover': {
               opacity: s.status === 'CANCELED' ? 0.6 : 0.88,
               transform: 'scale(1.01)',
             },
           }}
         >
-          {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', overflow: 'hidden' }}>
+            <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
+            </Box>
+            {s.status === 'COMPLETED' && !s.isPaid && (
+              <Box component="span" sx={{ flexShrink: 0, fontSize: 10, bgcolor: '#F59E0B', color: '#fff', borderRadius: '3px', px: '3px', lineHeight: '14px', fontWeight: 700 }}>
+                €
+              </Box>
+            )}
+          </Box>
+          {s.status === 'COMPLETED' && !s.isPaid && getSessionHeight(s) >= 36 && (
+            <Box sx={{ fontSize: 10, opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', mt: '1px' }}>
+              Nije naplaćeno
+            </Box>
+          )}
         </Box>
       </Tooltip>
     );
@@ -420,16 +433,63 @@ export default function CalendarPage() {
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-        {Object.entries(SESSION_STATUS).map(([key, cfg]) => (
-          <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cfg.hex }} />
-            <Typography variant="caption" color="text.secondary" fontWeight={500}>
-              {cfg.label}
+      <Card variant="outlined" sx={{ mb: 2, px: 2, py: 1.5 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', mb: 0.75 }}>
+              Status tretmana
             </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              {Object.entries(SESSION_STATUS).map(([key, cfg]) => (
+                <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '3px', bgcolor: cfg.bg, flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={500}>{cfg.label}</Typography>
+                </Box>
+              ))}
+            </Box>
           </Box>
-        ))}
-      </Box>
+
+          <Box sx={{ width: '1px', bgcolor: 'divider', alignSelf: 'stretch', display: { xs: 'none', sm: 'block' } }} />
+
+          <Box>
+            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', mb: 0.75 }}>
+              Oznake na kartici
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Box sx={{ width: 3, height: 16, bgcolor: '#F59E0B', borderRadius: '2px', flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>Nije naplaćeno</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Box component="span" sx={{ fontSize: 10, bgcolor: '#F59E0B', color: '#fff', borderRadius: '3px', px: '4px', lineHeight: '16px', fontWeight: 700 }}>€</Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>Oznaka neplaćenog tretmana</Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Box sx={{ width: '1px', bgcolor: 'divider', alignSelf: 'stretch', display: { xs: 'none', sm: 'block' } }} />
+
+          <Box>
+            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', mb: 0.75 }}>
+              Interakcija
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '2px', border: '1.5px dashed', borderColor: 'text.disabled', flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>Klik na slobodan slot → zakaži tretman</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: 'action.selected', flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>Klik na karticu → izmeni tretman</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'primary.main', opacity: 0.25, flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>Plava kolona = današnji dan</Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </Card>
 
       <Card sx={{ overflow: 'hidden' }}>
         <Box sx={{ overflowX: 'auto' }}>

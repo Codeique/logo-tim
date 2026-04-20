@@ -20,7 +20,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(powershell -Command \"Stop-Process -Id 8960 -Force\")",
       "Bash(find C:/Users/localUser/Documents/projects/logo-tim/backend/src -name \"*.js\" -delete)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

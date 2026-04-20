@@ -33,7 +33,10 @@ export const list = async (req: Request<{}, {}, {}, FinanceQuery>, res: Response
     }
 
     const { skip, take } = parsePagination(req.query);
-    const [records, total, totals] = await Promise.all([
+    const wherePaid   = { ...where, session: { ...(where.session as object), isPaid: true  } };
+    const whereUnpaid = { ...where, session: { ...(where.session as object), isPaid: false } };
+
+    const [records, total, totalsPaid] = await Promise.all([
       prisma.finance.findMany({
         where,
         skip,
@@ -47,9 +50,9 @@ export const list = async (req: Request<{}, {}, {}, FinanceQuery>, res: Response
         orderBy: { createdAt: 'desc' },
       }),
       prisma.finance.count({ where }),
-      prisma.finance.aggregate({ where, _sum: { therapistEarning: true, companyIncome: true } }),
+      prisma.finance.aggregate({ where: wherePaid, _sum: { therapistEarning: true, companyIncome: true } }),
     ]);
 
-    res.json({ data: records, total, totals: totals._sum });
+    res.json({ data: records, total, totalsPaid: totalsPaid._sum });
   } catch (err) { next(err); }
 };

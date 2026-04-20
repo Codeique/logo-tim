@@ -59,7 +59,7 @@ export default function FinancePage() {
 
   const records = data?.data || [];
   const total = data?.total || 0;
-  const totals = data?.totals || {};
+  const totalsPaid = data?.totalsPaid || {};
 
   return (
     <Box>
@@ -91,7 +91,7 @@ export default function FinancePage() {
         <Grid item xs={12} sm={6}>
           <SummaryCard
             title="Ukupna zarada logopeda"
-            value={formatCurrency(totals.therapistEarning || 0)}
+            value={formatCurrency(totalsPaid.therapistEarning || 0)}
             icon={Person}
             color="primary.main"
             gradient="linear-gradient(135deg, #4A90E2, #6BA3E8)"
@@ -100,7 +100,7 @@ export default function FinancePage() {
         <Grid item xs={12} sm={6}>
           <SummaryCard
             title="Ukupan prihod firme"
-            value={formatCurrency(totals.companyIncome || 0)}
+            value={formatCurrency(totalsPaid.companyIncome || 0)}
             icon={TrendingUp}
             color="success.main"
             gradient="linear-gradient(135deg, #10B981, #34D399)"
@@ -150,6 +150,7 @@ export default function FinancePage() {
                   <TableCell>Logoped</TableCell>
                   <TableCell>Trajanje</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Naplata</TableCell>
                   <TableCell align="right">Zarada logopeda</TableCell>
                   <TableCell align="right">Prihod firme</TableCell>
                 </TableRow>
@@ -158,14 +159,14 @@ export default function FinancePage() {
                 {isLoading ? (
                   [...Array(10)].map((_, i) => (
                     <TableRow key={i}>
-                      {[...Array(7)].map((_, j) => (
+                      {[...Array(8)].map((_, j) => (
                         <TableCell key={j}><Skeleton height={20} /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : records.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Box sx={{ py: 6, textAlign: 'center' }}>
                         <AccountBalance sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
                         <Typography color="text.secondary" fontWeight={500}>
@@ -200,13 +201,24 @@ export default function FinancePage() {
                         variant="outlined"
                       />
                     </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={r.session?.isPaid ? 'Naplaćeno' : 'Nije naplaćeno'}
+                        size="small"
+                        color={r.session?.isPaid ? 'success' : 'warning'}
+                        variant={r.session?.isPaid ? 'outlined' : 'filled'}
+                        sx={{ fontWeight: 600 }}
+                      />
+                    </TableCell>
                     <TableCell align="right">
-                      <Typography fontWeight={600} color="primary.main">
+                      <Typography fontWeight={600} color={r.session?.isPaid ? 'primary.main' : 'warning.main'}
+                        sx={{ opacity: r.session?.isPaid ? 1 : 0.75 }}>
                         {formatCurrency(r.therapistEarning)}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography fontWeight={600} color="success.main">
+                      <Typography fontWeight={600} color={r.session?.isPaid ? 'success.main' : 'warning.main'}
+                        sx={{ opacity: r.session?.isPaid ? 1 : 0.75 }}>
                         {formatCurrency(r.companyIncome)}
                       </Typography>
                     </TableCell>

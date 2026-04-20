@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Grid, MenuItem, CircularProgress,
-  Alert, Switch, FormControlLabel, Autocomplete,
+  Alert, Autocomplete, Divider, Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -12,7 +12,7 @@ import { SESSION_STATUS } from '../utils/statusConfig';
 const EMPTY = {
   patientId: '', therapistId: '', roomId: '', date: '',
   startTime: '', duration: '45', treatmentType: '',
-  status: 'SCHEDULED', isPaid: false,
+  status: 'SCHEDULED', isPaid: false, report: '',
 };
 
 export default function SessionFormDialog({ open, onClose, session, defaultSlot }) {
@@ -32,6 +32,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
         treatmentType: session.treatmentType || '',
         status: session.status || 'SCHEDULED',
         isPaid: session.isPaid || false,
+        report: session.report || '',
       });
     } else if (defaultSlot) {
       setForm(f => ({ ...EMPTY, date: defaultSlot.date, startTime: defaultSlot.startTime, roomId: defaultSlot.roomId ?? '' }));
@@ -162,7 +163,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
             />
           </Grid>
           {session && (
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={form.status === 'COMPLETED' ? 6 : 12}>
               <TextField fullWidth select label="Status" value={form.status} onChange={set('status')}>
                 {Object.entries(SESSION_STATUS).map(([k, v]) => (
                   <MenuItem key={k} value={k}>{v.label}</MenuItem>
@@ -170,11 +171,29 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
               </TextField>
             </Grid>
           )}
-          {session && (
+          {session && form.status === 'COMPLETED' && (
             <Grid item xs={12} sm={6}>
-              <FormControlLabel
-                control={<Switch checked={form.isPaid} onChange={(e) => setForm(f => ({ ...f, isPaid: e.target.checked }))} />}
-                label="Plaćeno"
+              <TextField fullWidth select label="Naplata" value={form.isPaid ? 'paid' : 'unpaid'}
+                onChange={(e) => setForm(f => ({ ...f, isPaid: e.target.value === 'paid' }))}>
+                <MenuItem value="paid">Naplaćeno</MenuItem>
+                <MenuItem value="unpaid">Nije naplaćeno</MenuItem>
+              </TextField>
+            </Grid>
+          )}
+          {session && form.status === 'COMPLETED' && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                Izveštaj o tretmanu
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                minRows={4}
+                label="Beleške / evaluacija"
+                placeholder="Unesite beleške o toku tretmana, napretku pacijenta..."
+                value={form.report}
+                onChange={set('report')}
               />
             </Grid>
           )}
