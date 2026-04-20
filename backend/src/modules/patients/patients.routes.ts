@@ -8,6 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 router.get('/', ctrl.list);
+router.get('/me', ctrl.getMe);
 router.get('/:id', ctrl.getById);
 router.post('/', authorize('ADMIN', 'THERAPIST'), createPatientValidation, validate, ctrl.create);
 router.put('/:id', authorize('ADMIN', 'THERAPIST'), updatePatientValidation, validate, ctrl.update);

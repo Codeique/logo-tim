@@ -4,6 +4,7 @@ import prisma from '../../lib/prisma';
 import { emitEvent } from '../../socket';
 import { buildPatientWhereClause } from './patients.service';
 import { parsePagination } from '../../lib/pagination';
+import { getPatientId } from '../../lib/profileCache';
 
 interface PatientQuery {
   page?: string;
@@ -63,6 +64,36 @@ export const list = async (req: Request<{}, {}, {}, PatientQuery>, res: Response
     ]);
 
     res.json({ data: patients, total, page, limit });
+  } catch (err) { next(err); }
+};
+
+export const getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const pId = await getPatientId(req.user.id);
+    if (!pId) { res.status(404).json({ message: 'Patient profile not found' }); return; }
+    const patient = await prisma.patient.findUnique({
+      where: { id: pId },
+      include: {
+        therapist: { select: { id: true, firstName: true, lastName: true } },
+        sessions: {
+          include: {
+            therapist: { select: { firstName: true, lastName: true } },
+            room: { select: { id: true, name: true } },
+          },
+          orderBy: { date: 'desc' },
+          take: 100,
+        },
+        transactions: {
+          include: { createdBy: { select: { email: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
+        evaluations: { orderBy: { date: 'desc' }, take: 50 },
+        militaryRequests: { orderBy: { createdAt: 'desc' }, take: 50 },
+      },
+    });
+    if (!patient) { res.status(404).json({ message: 'Patient not found' }); return; }
+    res.json(patient);
   } catch (err) { next(err); }
 };
 

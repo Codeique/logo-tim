@@ -17,11 +17,11 @@ const DRAWER_WIDTH = 252;
 
 const navItems = [
   { label: 'Početna', path: '/', icon: Dashboard, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
-  { label: 'Pacijenti', path: '/patients', icon: People, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
+  { label: 'Pacijenti', path: '/patients', icon: People, roles: ['ADMIN', 'THERAPIST'] },
   { label: 'Logopedi', path: '/therapists', icon: Person, roles: ['ADMIN'] },
   { label: 'Prostorije', path: '/rooms', icon: MeetingRoom, roles: ['ADMIN'] },
   { label: 'Nedeljni/Dnevni raspored', path: '/calendar', icon: CalendarMonth, roles: ['ADMIN', 'THERAPIST'] },
-  { label: 'Transakcije', path: '/transactions', icon: Receipt, roles: ['ADMIN', 'PATIENT'] },
+  { label: 'Transakcije', path: '/transactions', icon: Receipt, roles: ['ADMIN'] },
   { label: 'Finansije', therapistLabel: 'Moja zarada', path: '/finance', icon: AccountBalance, roles: ['ADMIN', 'THERAPIST'] },
 ];
 
