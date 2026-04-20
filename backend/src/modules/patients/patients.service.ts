@@ -1,6 +1,5 @@
 import { Prisma, Role } from '@prisma/client';
-import { isTherapistRole } from '../../lib/roles';
-import { getTherapistId, getPatientId } from '../../lib/profileCache';
+import { getPatientId } from '../../lib/profileCache';
 
 interface PatientQuery {
   search?: string;
@@ -34,10 +33,6 @@ export async function buildPatientWhereClause(
   if (isMilitary !== undefined) where.isMilitary = isMilitary === 'true';
   if (active !== undefined) where.isActive = active === 'true';
 
-  if (isTherapistRole(user.role)) {
-    const tId = await getTherapistId(user.id);
-    if (tId) where.therapistId = tId;
-  }
 
   if (user.role === Role.PATIENT) {
     const pId = await getPatientId(user.id);

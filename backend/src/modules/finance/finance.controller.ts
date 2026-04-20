@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
-import prisma from '../../lib/prisma';
-import { isTherapistRole } from '../../lib/roles';
-import { parsePagination } from '../../lib/pagination';
-import { getTherapistId } from '../../lib/profileCache';
+import { Request, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
+import prisma from "../../lib/prisma";
+import { isTherapistRole } from "../../lib/roles";
+import { parsePagination } from "../../lib/pagination";
+import { getTherapistId } from "../../lib/profileCache";
 
 interface FinanceQuery {
   dateFrom?: string;
@@ -13,7 +13,11 @@ interface FinanceQuery {
   limit?: string;
 }
 
-export const list = async (req: Request<{}, {}, {}, FinanceQuery>, res: Response, next: NextFunction): Promise<void> => {
+export const list = async (
+  req: Request<{}, {}, {}, FinanceQuery>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const { dateFrom, dateTo, therapistId } = req.query;
     const where: Prisma.FinanceWhereInput = {};
@@ -33,8 +37,10 @@ export const list = async (req: Request<{}, {}, {}, FinanceQuery>, res: Response
     }
 
     const { skip, take } = parsePagination(req.query);
-    const wherePaid   = { ...where, session: { ...(where.session as object), isPaid: true  } };
-    const whereUnpaid = { ...where, session: { ...(where.session as object), isPaid: false } };
+    const wherePaid = {
+      ...where,
+      session: { ...(where.session as object), isPaid: true },
+    };
 
     const [records, total, totalsPaid] = await Promise.all([
       prisma.finance.findMany({
@@ -43,16 +49,23 @@ export const list = async (req: Request<{}, {}, {}, FinanceQuery>, res: Response
         take,
         include: {
           session: {
-            include: { patient: { select: { firstName: true, lastName: true } } },
+            include: {
+              patient: { select: { firstName: true, lastName: true } },
+            },
           },
           therapist: { select: { firstName: true, lastName: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.finance.count({ where }),
-      prisma.finance.aggregate({ where: wherePaid, _sum: { therapistEarning: true, companyIncome: true } }),
+      prisma.finance.aggregate({
+        where: wherePaid,
+        _sum: { therapistEarning: true, companyIncome: true },
+      }),
     ]);
 
     res.json({ data: records, total, totalsPaid: totalsPaid._sum });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };

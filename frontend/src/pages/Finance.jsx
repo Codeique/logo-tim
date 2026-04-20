@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import api from '../api/axios';
 import { formatCurrency } from '../utils/currency';
 import { SESSION_STATUS } from '../utils/statusConfig';
+import useAuthStore from '../store/authStore';
 
 const SummaryCard = ({ title, value, icon: Icon, color, gradient }) => (
   <Card>
@@ -39,7 +40,74 @@ const SummaryCard = ({ title, value, icon: Icon, color, gradient }) => (
   </Card>
 );
 
+function TherapistEarningsView() {
+  const [filters, setFilters] = useState({ dateFrom: '', dateTo: '' });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['finance-my-earnings', filters],
+    queryFn: () => api.get('/finance', {
+      params: {
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        limit: 1,
+      },
+    }).then(r => r.data),
+  });
+
+  const totalsPaid = data?.totalsPaid || {};
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+        <Box sx={{
+          width: 40, height: 40, borderRadius: 1, bgcolor: 'action.selected',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <AccountBalance sx={{ color: 'primary.main', fontSize: 22 }} />
+        </Box>
+        <Typography variant="h5" fontWeight={700}>Moja zarada</Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+        <TextField
+          type="date" label="Od datuma" size="small"
+          InputLabelProps={{ shrink: true }}
+          value={filters.dateFrom}
+          onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))}
+          sx={{ minWidth: 160 }}
+        />
+        <TextField
+          type="date" label="Do datuma" size="small"
+          InputLabelProps={{ shrink: true }}
+          value={filters.dateTo}
+          onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))}
+          sx={{ minWidth: 160 }}
+        />
+      </Box>
+
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} sm={6} md={4}>
+          {isLoading ? (
+            <Card><CardContent><Skeleton height={60} /></CardContent></Card>
+          ) : (
+            <SummaryCard
+              title="Ukupna zarada (naplaćeno)"
+              value={formatCurrency(totalsPaid.therapistEarning || 0)}
+              icon={Person}
+              color="primary.main"
+              gradient="linear-gradient(135deg, #4A90E2, #6BA3E8)"
+            />
+          )}
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
 export default function FinancePage() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
+
   const [filters, setFilters] = useState({ dateFrom: '', dateTo: '' });
   const [page, setPage] = useState(1);
   const LIMIT = 20;
@@ -55,7 +123,10 @@ export default function FinancePage() {
         dateTo: filters.dateTo || undefined,
       },
     }).then(r => r.data),
+    enabled: isAdmin,
   });
+
+  if (!isAdmin) return <TherapistEarningsView />;
 
   const records = data?.data || [];
   const total = data?.total || 0;

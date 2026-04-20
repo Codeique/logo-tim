@@ -21,8 +21,8 @@ const navItems = [
   { label: 'Logopedi', path: '/therapists', icon: Person, roles: ['ADMIN'] },
   { label: 'Prostorije', path: '/rooms', icon: MeetingRoom, roles: ['ADMIN'] },
   { label: 'Nedeljni/Dnevni raspored', path: '/calendar', icon: CalendarMonth, roles: ['ADMIN', 'THERAPIST'] },
-  { label: 'Transakcije', path: '/transactions', icon: Receipt, roles: ['ADMIN', 'THERAPIST', 'PATIENT'] },
-  { label: 'Finansije', path: '/finance', icon: AccountBalance, roles: ['ADMIN', 'THERAPIST'] },
+  { label: 'Transakcije', path: '/transactions', icon: Receipt, roles: ['ADMIN', 'PATIENT'] },
+  { label: 'Finansije', therapistLabel: 'Moja zarada', path: '/finance', icon: AccountBalance, roles: ['ADMIN', 'THERAPIST'] },
 ];
 
 export default function Layout({ onToggleTheme, mode }) {
@@ -112,7 +112,7 @@ export default function Layout({ onToggleTheme, mode }) {
                   <IconComp sx={{ fontSize: 19 }} />
                 </ListItemIcon>
                 <ListItemText
-                  primary={item.label}
+                  primary={(item.therapistLabel && user?.role === 'THERAPIST') ? item.therapistLabel : item.label}
                   primaryTypographyProps={{
                     fontSize: 13.5,
                     fontWeight: active ? 600 : 400,

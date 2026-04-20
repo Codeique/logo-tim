@@ -67,7 +67,18 @@ export const list = async (req: Request<{}, {}, {}, SessionListQuery>, res: Resp
 
     if (isTherapistRole(req.user.role)) {
       const tId = await getTherapistId(req.user.id);
-      if (tId) where.therapistId = tId;
+      if (tId) {
+        const therapist = await prisma.therapist.findUnique({
+          where: { id: tId },
+          select: { rooms: { select: { id: true } } },
+        });
+        const roomIds = (therapist?.rooms ?? []).map(r => r.id);
+        if (roomIds.length > 0) {
+          where.roomId = { in: roomIds };
+        } else {
+          where.therapistId = tId;
+        }
+      }
     }
     if (req.user.role === Role.PATIENT) {
       const pId = await getPatientId(req.user.id);
