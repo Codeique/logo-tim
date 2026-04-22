@@ -19,7 +19,7 @@ export async function buildPatientWhereClause(
   query: PatientQuery,
 ): Promise<Prisma.PatientWhereInput> {
   const { search, therapistId, isMilitary, active } = query;
-  const where: Prisma.PatientWhereInput = {};
+  const where: Prisma.PatientWhereInput = { deletedAt: null };
 
   if (search) {
     where.OR = [
@@ -29,7 +29,7 @@ export async function buildPatientWhereClause(
       { phone:     { contains: search, mode: 'insensitive' } },
     ];
   }
-  if (therapistId) where.therapistId = parseInt(therapistId);
+  if (therapistId) where.primaryTherapistId = parseInt(therapistId);
   if (isMilitary !== undefined) where.isMilitary = isMilitary === 'true';
   if (active !== undefined) where.isActive = active === 'true';
 

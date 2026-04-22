@@ -30,7 +30,7 @@ interface PatientCreateBody {
   insuranceHolder?: string;
   medicalFileNumber?: string;
   militaryPost?: string;
-  therapistId?: number | string;
+  primaryTherapistId?: number | string;
 }
 
 interface PatientUpdateBody extends Partial<PatientCreateBody> {}
@@ -50,7 +50,7 @@ export const list = async (req: Request<{}, {}, {}, PatientQuery>, res: Response
         skip,
         take,
         include: {
-          therapist: { select: { id: true, firstName: true, lastName: true } },
+          primaryTherapist: { select: { id: true, firstName: true, lastName: true } },
           _count: { select: { sessions: true } },
           militaryRequests: {
             where: { validFrom: { lte: now }, validUntil: { gte: startOfToday } },
@@ -74,7 +74,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
     const patient = await prisma.patient.findUnique({
       where: { id: pId },
       include: {
-        therapist: { select: { id: true, firstName: true, lastName: true } },
+        primaryTherapist: { select: { id: true, firstName: true, lastName: true } },
         sessions: {
           include: {
             therapist: { select: { firstName: true, lastName: true } },
@@ -99,10 +99,10 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
 
 export const getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const patient = await prisma.patient.findUnique({
-      where: { id: parseInt(req.params.id) },
+    const patient = await prisma.patient.findFirst({
+      where: { id: parseInt(req.params.id), deletedAt: null },
       include: {
-        therapist: { select: { id: true, firstName: true, lastName: true } },
+        primaryTherapist: { select: { id: true, firstName: true, lastName: true } },
         sessions: {
           include: {
             therapist: { select: { firstName: true, lastName: true } },
@@ -144,9 +144,9 @@ export const create = async (req: Request<{}, {}, PatientCreateBody>, res: Respo
         insuranceHolder: data.insuranceHolder,
         medicalFileNumber: data.medicalFileNumber,
         militaryPost: data.militaryPost,
-        therapistId: data.therapistId ? parseInt(String(data.therapistId)) : null,
+        primaryTherapistId: data.primaryTherapistId ? parseInt(String(data.primaryTherapistId)) : null,
       },
-      include: { therapist: { select: { id: true, firstName: true, lastName: true } } },
+      include: { primaryTherapist: { select: { id: true, firstName: true, lastName: true } } },
     });
     emitEvent('patients:updated', { action: 'created', patient });
     res.status(201).json(patient);
@@ -158,7 +158,7 @@ export const update = async (req: Request<{ id: string }, {}, PatientUpdateBody>
     const { id } = req.params;
     const data = req.body;
     // DI-03: fetch old value before update, but audit log is written after update succeeds
-    const old = await prisma.patient.findUnique({ where: { id: parseInt(id) } });
+    const old = await prisma.patient.findFirst({ where: { id: parseInt(id), deletedAt: null } });
     if (!old) { res.status(404).json({ message: 'Patient not found' }); return; }
     const patient = await prisma.patient.update({
       where: { id: parseInt(id) },
@@ -177,11 +177,11 @@ export const update = async (req: Request<{ id: string }, {}, PatientUpdateBody>
         insuranceHolder: data.insuranceHolder,
         medicalFileNumber: data.medicalFileNumber,
         militaryPost: data.militaryPost,
-        therapistId: data.therapistId !== undefined
-          ? (data.therapistId ? parseInt(String(data.therapistId)) : null)
+        primaryTherapistId: data.primaryTherapistId !== undefined
+          ? (data.primaryTherapistId ? parseInt(String(data.primaryTherapistId)) : null)
           : undefined,
       },
-      include: { therapist: { select: { id: true, firstName: true, lastName: true } } },
+      include: { primaryTherapist: { select: { id: true, firstName: true, lastName: true } } },
     });
     // Manual audit log — captures oldValue; do NOT add auditLog middleware to this route (BUG-06)
     await prisma.auditLog.create({
@@ -192,6 +192,8 @@ export const update = async (req: Request<{ id: string }, {}, PatientUpdateBody>
         entityId: parseInt(id),
         oldValue: old as Prisma.InputJsonValue,
         newValue: patient as Prisma.InputJsonValue,
+        ipAddress: req.ip ?? null,
+        userAgent: (req.headers['user-agent'] as string) ?? null,
       },
     });
     emitEvent('patients:updated', { action: 'updated', patient });
@@ -202,16 +204,25 @@ export const update = async (req: Request<{ id: string }, {}, PatientUpdateBody>
 export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    await prisma.patient.update({ where: { id: parseInt(id) }, data: { isActive: false } });
+    const now = new Date();
+    const patient = await prisma.patient.findFirst({ where: { id: parseInt(id), deletedAt: null }, select: { userId: true } });
+    if (!patient) { res.status(404).json({ message: 'Patient not found' }); return; }
+    await prisma.$transaction([
+      prisma.patient.update({ where: { id: parseInt(id) }, data: { deletedAt: now, isActive: false } }),
+      ...(patient.userId ? [
+        prisma.user.update({ where: { id: patient.userId }, data: { deletedAt: now } }),
+        prisma.userToken.deleteMany({ where: { userId: patient.userId } }),
+      ] : []),
+    ]);
     emitEvent('patients:updated', { action: 'deleted', id: parseInt(id) });
-    res.json({ message: 'Patient deactivated' });
+    res.json({ message: 'Patient deleted' });
   } catch (err) { next(err); }
 };
 
 export const toggleActive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const patient = await prisma.patient.findUniqueOrThrow({ where: { id: parseInt(id) }, select: { isActive: true } });
+    const patient = await prisma.patient.findFirstOrThrow({ where: { id: parseInt(id), deletedAt: null }, select: { isActive: true } });
     const updated = await prisma.patient.update({ where: { id: parseInt(id) }, data: { isActive: !patient.isActive } });
     emitEvent('patients:updated', { action: 'updated', patient: updated });
     res.json({ isActive: updated.isActive });

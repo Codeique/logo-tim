@@ -22,6 +22,8 @@ export const auditLog = (entity: string, action: string): RequestHandler =>
             entity,
             entityId: entityId ?? null,
             newValue: body ? (body as Prisma.InputJsonValue) : Prisma.JsonNull, // unavoidable: Record<string,unknown> ≠ InputJsonValue
+            ipAddress: req.ip ?? null,
+            userAgent: (req.headers['user-agent'] as string) ?? null,
           },
         }).catch(() => { /* silent */ });
       }

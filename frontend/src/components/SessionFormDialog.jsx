@@ -27,7 +27,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
         therapistId: session.therapistId || '',
         roomId: session.roomId || '',
         date: session.date ? session.date.split('T')[0] : '',
-        startTime: session.startTime || '',
+        startTime: session.startTime ? session.startTime.slice(11, 16) : '',
         duration: session.duration || '45',
         treatmentType: session.treatmentType || '',
         status: session.status || 'SCHEDULED',

@@ -10,14 +10,14 @@ import api from '../api/axios';
 
 const EMPTY = {
   firstName: '', lastName: '', nickname: '', birthDate: '', phone: '',
-  diagnosis: '', notes: '', sessionPrice: '', therapistId: '',
+  diagnosis: '', notes: '', sessionPrice: '', primaryTherapistId: '',
   isActive: true, isMilitary: false,
   nationalId: '', insuranceHolder: '', medicalFileNumber: '', militaryPost: '',
 };
 
 const NO_ERRORS = {
   firstName: '', lastName: '', nickname: '', birthDate: '', phone: '',
-  diagnosis: '', sessionPrice: '', therapistId: '',
+  diagnosis: '', sessionPrice: '', primaryTherapistId: '',
   nationalId: '', insuranceHolder: '', medicalFileNumber: '', militaryPost: '',
 };
 
@@ -37,7 +37,7 @@ export default function PatientFormDialog({ open, onClose, patient }) {
         diagnosis: patient.diagnosis || '',
         notes: patient.notes || '',
         sessionPrice: patient.sessionPrice || '',
-        therapistId: patient.therapistId || '',
+        primaryTherapistId: patient.primaryTherapistId || '',
         isActive: patient.isActive !== false,
         isMilitary: patient.isMilitary || false,
         nationalId: patient.nationalId || '',
@@ -88,7 +88,7 @@ export default function PatientFormDialog({ open, onClose, patient }) {
     if (!form.phone.trim()) errs.phone = 'Obavezno polje';
     if (!form.diagnosis.trim()) errs.diagnosis = 'Obavezno polje';
     if (form.sessionPrice === '' || form.sessionPrice === null) errs.sessionPrice = 'Obavezno polje';
-    if (!form.therapistId) errs.therapistId = 'Obavezno polje';
+    if (!form.primaryTherapistId) errs.primaryTherapistId = 'Obavezno polje';
     if (form.isMilitary) {
       if (!form.nationalId.trim()) errs.nationalId = 'Obavezno polje';
       if (!form.insuranceHolder.trim()) errs.insuranceHolder = 'Obavezno polje';
@@ -140,8 +140,8 @@ export default function PatientFormDialog({ open, onClose, patient }) {
               error={!!errors.sessionPrice} helperText={errors.sessionPrice} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField required fullWidth select label="Dodeljeni logoped" value={form.therapistId} onChange={set('therapistId')}
-              error={!!errors.therapistId} helperText={errors.therapistId}>
+            <TextField required fullWidth select label="Dodeljeni logoped" value={form.primaryTherapistId} onChange={set('primaryTherapistId')}
+              error={!!errors.primaryTherapistId} helperText={errors.primaryTherapistId}>
               <MenuItem value="">Niko</MenuItem>
               {(therapists || []).map(t => (
                 <MenuItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</MenuItem>

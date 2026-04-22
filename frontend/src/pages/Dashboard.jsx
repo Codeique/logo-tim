@@ -188,7 +188,7 @@ function PatientDashboard() {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <InfoRow label="Logoped" value={patient.therapist ? `${patient.therapist.firstName} ${patient.therapist.lastName}` : null} />
+                <InfoRow label="Logoped" value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : null} />
                 <InfoRow label="Cena tretmana" value={formatCurrency(patient.sessionPrice)} />
               </Box>
             </CardContent>
@@ -247,7 +247,7 @@ function PatientDashboard() {
                     {patient.sessions?.map(s => (
                       <TableRow key={s.id} hover>
                         <TableCell>{format(new Date(s.date), 'dd.MM.yyyy')}</TableCell>
-                        <TableCell>{s.startTime}</TableCell>
+                        <TableCell>{s.startTime?.slice(11, 16)}</TableCell>
                         <TableCell>{s.therapist?.firstName} {s.therapist?.lastName}</TableCell>
                         <TableCell>{s.room?.name || '—'}</TableCell>
                         <TableCell>{s.duration} min</TableCell>
@@ -543,7 +543,7 @@ export default function DashboardPage() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
                           <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontSize: 12 }}>
-                            {s.startTime}
+                            {s.startTime?.slice(11, 16)}
                           </Typography>
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>

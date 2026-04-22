@@ -29,7 +29,7 @@ export async function getCachedTherapists(): Promise<TherapistWithRelations[]> {
   const cached = therapistCache.get('all');
   if (cached) return cached;
   const therapists = await prisma.therapist.findMany({
-    where: { isActive: true },
+    where: { isActive: true, deletedAt: null },
     include: {
       rooms: true,
       user: { select: { email: true, role: true } },

@@ -13,11 +13,3 @@ export function generateTokens(userId: number, role: Role): { accessToken: strin
 export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
-
-/** Verify a raw token against its stored hash using timing-safe comparison. */
-export function verifyToken(token: string, storedHash: string): boolean {
-  const incoming = Buffer.from(hashToken(token), 'hex');
-  const stored = Buffer.from(storedHash, 'hex');
-  if (incoming.length !== stored.length) return false;
-  return crypto.timingSafeEqual(incoming, stored);
-}

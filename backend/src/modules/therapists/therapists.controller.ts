@@ -30,7 +30,7 @@ export const list = async (req: Request, res: Response, next: NextFunction): Pro
     // THERAPIST role: show only self (no cache — personalised result)
     if (req.user.role === Role.THERAPIST) {
       const therapists = await prisma.therapist.findMany({
-        where: { userId: req.user.id },
+        where: { userId: req.user.id, deletedAt: null },
         include: {
           rooms: true,
           user: { select: { email: true, role: true } },
@@ -49,8 +49,8 @@ export const list = async (req: Request, res: Response, next: NextFunction): Pro
 
 export const getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const therapist = await prisma.therapist.findUnique({
-      where: { id: parseInt(req.params.id) },
+    const therapist = await prisma.therapist.findFirst({
+      where: { id: parseInt(req.params.id), deletedAt: null },
       include: {
         rooms: true,
         user: { select: { email: true, role: true } },
@@ -115,9 +115,17 @@ export const update = async (req: Request<{ id: string }, {}, TherapistUpdateBod
 
 export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    await prisma.therapist.update({ where: { id: parseInt(req.params.id) }, data: { isActive: false } });
+    const therapistId = parseInt(req.params.id);
+    const now = new Date();
+    const therapist = await prisma.therapist.findFirst({ where: { id: therapistId, deletedAt: null }, select: { userId: true } });
+    if (!therapist) { res.status(404).json({ message: 'Therapist not found' }); return; }
+    await prisma.$transaction([
+      prisma.therapist.update({ where: { id: therapistId }, data: { deletedAt: now, isActive: false } }),
+      prisma.user.update({ where: { id: therapist.userId }, data: { deletedAt: now } }),
+      prisma.userToken.deleteMany({ where: { userId: therapist.userId } }),
+    ]);
     invalidateTherapistCache();
-    emitEvent('therapists:updated', { action: 'deleted', id: parseInt(req.params.id) });
-    res.json({ message: 'Therapist deactivated' });
+    emitEvent('therapists:updated', { action: 'deleted', id: therapistId });
+    res.json({ message: 'Therapist deleted' });
   } catch (err) { next(err); }
 };

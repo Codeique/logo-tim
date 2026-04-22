@@ -64,7 +64,7 @@ export default function CalendarPage() {
     const dayStr = format(day, 'yyyy-MM-dd');
     return sessions.filter(s => {
       if (s.date?.slice(0, 10) !== dayStr) return false;
-      const [h] = (s.startTime || '00:00').split(':').map(Number);
+      const [h] = (s.startTime ? s.startTime.slice(11, 16) : '00:00').split(':').map(Number);
       return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
     });
   };
@@ -74,13 +74,13 @@ export default function CalendarPage() {
     return sessions.filter(s => {
       if (s.date?.slice(0, 10) !== dayStr) return false;
       if (s.roomId !== roomId) return false;
-      const [h] = (s.startTime || '00:00').split(':').map(Number);
+      const [h] = (s.startTime ? s.startTime.slice(11, 16) : '00:00').split(':').map(Number);
       return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
     });
   };
 
   const getSessionTop = (session) => {
-    const [h, m] = (session.startTime || '00:00').split(':').map(Number);
+    const [h, m] = (session.startTime ? session.startTime.slice(11, 16) : '00:00').split(':').map(Number);
     return (h - HOURS[0]) * ROW_HEIGHT + (m / 60) * ROW_HEIGHT;
   };
 
@@ -90,7 +90,7 @@ export default function CalendarPage() {
   };
 
   const getTimeMinutes = (session) => {
-    const [h, m] = (session.startTime || '00:00').split(':').map(Number);
+    const [h, m] = (session.startTime ? session.startTime.slice(11, 16) : '00:00').split(':').map(Number);
     return h * 60 + m;
   };
 
@@ -203,7 +203,7 @@ export default function CalendarPage() {
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', overflow: 'hidden' }}>
             <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
+              {s.startTime?.slice(11, 16)} {s.patient?.firstName} {s.patient?.lastName}
             </Box>
             {s.status === 'COMPLETED' && !s.isPaid && (
               <Box component="span" sx={{ flexShrink: 0, fontSize: 10, bgcolor: '#F59E0B', color: '#fff', borderRadius: '3px', px: '3px', lineHeight: '14px', fontWeight: 700 }}>

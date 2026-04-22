@@ -23,7 +23,9 @@
       "Bash(npm test *)",
       "Bash(xargs grep *)",
       "Skill(statusline)",
-      "Bash(bash *)"
+      "Bash(bash *)",
+      "Bash(docker-compose up *)",
+      "Bash(echo.)"
     ]
   }
 }

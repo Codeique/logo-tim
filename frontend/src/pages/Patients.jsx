@@ -326,12 +326,12 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           <Typography sx={{
             fontSize: '0.775rem',
             fontWeight: 600,
-            color: p.therapist ? 'text.primary' : 'text.disabled',
+            color: p.primaryTherapist ? 'text.primary' : 'text.disabled',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>
-            {p.therapist ? `${p.therapist.firstName} ${p.therapist.lastName}` : 'Nije dodeljen'}
+            {p.primaryTherapist ? `${p.primaryTherapist.firstName} ${p.primaryTherapist.lastName}` : 'Nije dodeljen'}
           </Typography>
         </Box>
 
