@@ -21,8 +21,12 @@
     "testMatch": [
       "**/tests/**/*.test.ts"
     ],
+    "setupFiles": [
+      "<rootDir>/tests/jest.setup.ts"
+    ],
     "moduleNameMapper": {
-      "^.*[\\/]lib[\\/]prisma$": "<rootDir>/tests/__mocks__/prisma.ts"
+      "^.*[\\/]lib[\\/]prisma$": "<rootDir>/tests/__mocks__/prisma.ts",
+      "^\\./prisma$": "<rootDir>/tests/__mocks__/prisma.ts"
     },
     "transform": {
       "^.+\\.ts$": [

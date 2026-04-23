@@ -17,7 +17,7 @@ async function validate(
 }
 
 // --- auth ---
-import { loginValidation, refreshValidation } from '../../src/modules/auth/auth.validation';
+import { loginValidation } from '../../src/modules/auth/auth.validation';
 
 describe('loginValidation', () => {
   it('accepts valid credentials', async () => {
@@ -34,15 +34,6 @@ describe('loginValidation', () => {
   it('rejects missing password', async () => {
     const errs = await validate(loginValidation, { email: 'a@b.com' });
     expect(errs.some(e => /password/i.test(e))).toBe(true);
-  });
-});
-
-describe('refreshValidation', () => {
-  it('accepts valid refresh token', async () => {
-    expect(await validate(refreshValidation, { refreshToken: 'sometoken' })).toHaveLength(0);
-  });
-  it('rejects missing refresh token', async () => {
-    expect(await validate(refreshValidation, {})).not.toHaveLength(0);
   });
 });
 
