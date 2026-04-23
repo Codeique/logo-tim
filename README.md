@@ -2,6 +2,17 @@
 
 A production-ready fullstack system for managing a speech therapy / therapy center.
 
+## Documentation
+
+| File | Audience | Contents |
+|------|----------|----------|
+| [`CLAUDE.md`](CLAUDE.md) | AI / contributors | Architecture, data flow, roles, cross-cutting conventions |
+| [`backend/BACKEND.md`](backend/BACKEND.md) | Backend developers | Commands, module pattern, Prisma conventions, caching, testing |
+| [`frontend/FRONTEND.md`](frontend/FRONTEND.md) | Frontend developers | Commands, state management, routing, utils, testing |
+| [`README.md`](README.md) *(this file)* | Everyone | Setup, environment variables, API reference, deployment |
+
+---
+
 ## Tech Stack
 
 - **Frontend**: React 18 + Vite + Material UI
