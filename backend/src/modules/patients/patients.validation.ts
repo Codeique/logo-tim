@@ -8,7 +8,7 @@ const baseRules = [
   body('phone').trim().notEmpty().withMessage('Telefon je obavezan'),
   body('diagnosis').trim().notEmpty().withMessage('Dijagnoza je obavezna'),
   body('sessionPrice').notEmpty().withMessage('Cena tretmana je obavezna').isFloat({ min: 0 }).withMessage('sessionPrice must be ≥ 0'),
-  body('therapistId').notEmpty().withMessage('Logoped je obavezan').isInt({ min: 1 }).withMessage('therapistId must be a valid ID'),
+  body('therapistId').notEmpty().withMessage('Terapeut je obavezan').isInt({ min: 1 }).withMessage('therapistId must be a valid ID'),
   body('isMilitary').optional().isBoolean(),
   body('isActive').optional().isBoolean(),
   body('nationalId').if(body('isMilitary').equals('true')).trim().notEmpty().withMessage('Matični broj je obavezan za vojnog osiguranika'),

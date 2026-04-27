@@ -139,7 +139,7 @@ async function main() {
       date: d,
       startTime: `${String(hour).padStart(2, '0')}:00`,
       duration: 45,
-      treatmentType: 'Logopedska terapija',
+      treatmentType: 'Terapeutska terapija',
       status: i < 15 ? 'COMPLETED' : i < 20 ? 'SCHEDULED' : 'CANCELED',
       isPaid: i < 10,
     });

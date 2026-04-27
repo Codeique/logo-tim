@@ -106,7 +106,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
 
   const handleSubmit = () => {
     if (!form.patientId || !form.therapistId || !form.date || !form.startTime) {
-      return toast.error('Pacijent, logoped, datum i vreme su obavezni');
+      return toast.error('Pacijent, terapeut, datum i vreme su obavezni');
     }
     mutation.mutate(form);
   };
@@ -126,8 +126,8 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
             </TextField>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth select label="Logoped *" value={form.therapistId} onChange={set('therapistId')}>
-              <MenuItem value=""><em>Odaberi logopeda</em></MenuItem>
+            <TextField fullWidth select label="Terapeut *" value={form.therapistId} onChange={set('therapistId')}>
+              <MenuItem value=""><em>Odaberi terapeuta</em></MenuItem>
               {therapists.map(t => (
                 <MenuItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</MenuItem>
               ))}

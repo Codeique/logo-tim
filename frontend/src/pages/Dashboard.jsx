@@ -188,7 +188,7 @@ function PatientDashboard() {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <InfoRow label="Logoped" value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : null} />
+                <InfoRow label="Terapeut" value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : null} />
                 <InfoRow label="Cena tretmana" value={formatCurrency(patient.sessionPrice)} />
               </Box>
             </CardContent>
@@ -236,7 +236,7 @@ function PatientDashboard() {
                     <TableRow>
                       <TableCell>Datum</TableCell>
                       <TableCell>Vreme</TableCell>
-                      <TableCell>Logoped</TableCell>
+                      <TableCell>Terapeut</TableCell>
                       <TableCell>Prostorija</TableCell>
                       <TableCell>Trajanje</TableCell>
                       <TableCell>Status</TableCell>

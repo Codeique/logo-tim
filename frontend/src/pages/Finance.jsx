@@ -161,7 +161,7 @@ export default function FinancePage() {
       <Grid container spacing={2.5} mb={3}>
         <Grid item xs={12} sm={6}>
           <SummaryCard
-            title="Ukupna zarada logopeda"
+            title="Ukupna zarada terapeuta"
             value={formatCurrency(totalsPaid.therapistEarning || 0)}
             icon={Person}
             color="primary.main"
@@ -218,11 +218,11 @@ export default function FinancePage() {
                 <TableRow>
                   <TableCell>Datum</TableCell>
                   <TableCell>Pacijent</TableCell>
-                  <TableCell>Logoped</TableCell>
+                  <TableCell>Terapeut</TableCell>
                   <TableCell>Trajanje</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Naplata</TableCell>
-                  <TableCell align="right">Zarada logopeda</TableCell>
+                  <TableCell align="right">Zarada terapeuta</TableCell>
                   <TableCell align="right">Prihod firme</TableCell>
                 </TableRow>
               </TableHead>

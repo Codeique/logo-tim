@@ -334,7 +334,7 @@ function HeroPanel() {
         <Box
           component="img"
           src={loginImg}
-          alt="Logopedski centar"
+          alt="Terapeutski centar"
           sx={{
             position: 'absolute',
             inset: 0,
@@ -393,7 +393,7 @@ function HeroPanel() {
                   lineHeight: 1.6,
                 }}
               >
-                Profesionalna logopedska pomoć za sve uzraste
+                Profesionalna terapeutska pomoć za sve uzraste
               </Typography>
             </Box>
           </Slide>
@@ -475,7 +475,7 @@ export default function LoginPage() {
                 textShadow: '0 1px 6px rgba(0,0,0,0.25)',
               }}
             >
-              Profesionalna logopedska pomoć za sve uzraste
+              Profesionalna terapeutska pomoć za sve uzraste
             </Typography>
           </Box>
 

@@ -321,7 +321,7 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
             display: 'block',
             mb: 0.15,
           }}>
-            Logoped
+            Terapeut
           </Typography>
           <Typography sx={{
             fontSize: '0.775rem',
@@ -625,14 +625,14 @@ export default function PatientsPage() {
               />
             </Box>
             <Box>
-              <Typography variant="caption" sx={FILTER_LABEL_SX}>Logoped</Typography>
+              <Typography variant="caption" sx={FILTER_LABEL_SX}>Terapeut</Typography>
               <FormControl fullWidth size="small">
                 <Select
                   value={therapistFilter}
                   onChange={(e) => { setTherapistFilter(e.target.value); resetPage(); }}
                   displayEmpty
                 >
-                  <MenuItem value="">Svi logopedi</MenuItem>
+                  <MenuItem value="">Svi terapeuti</MenuItem>
                   {therapists.map(t => (
                     <MenuItem key={t.id} value={String(t.id)}>
                       {t.firstName} {t.lastName}

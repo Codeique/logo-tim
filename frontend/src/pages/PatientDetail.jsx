@@ -283,7 +283,7 @@ export default function PatientDetailPage() {
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <InfoRow
-                  label="Logoped"
+                  label="Terapeut"
                   value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : null}
                 />
                 <InfoRow
@@ -376,7 +376,7 @@ export default function PatientDetailPage() {
                     <TableRow>
                       <TableCell>Datum</TableCell>
                       <TableCell>Vreme</TableCell>
-                      <TableCell>Logoped</TableCell>
+                      <TableCell>Terapeut</TableCell>
                       <TableCell>Prostorija</TableCell>
                       <TableCell>Trajanje</TableCell>
                       <TableCell>Status</TableCell>

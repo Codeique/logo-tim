@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LogoTim is a therapy center management system (speech therapy / logopedics). Fullstack monorepo: React 18 + Vite frontend, Node.js/Express backend, PostgreSQL via Prisma ORM, Socket.io for real-time updates.
+LogoTim is a therapy center management system (speech therapy / terapeutics). Fullstack monorepo: React 18 + Vite frontend, Node.js/Express backend, PostgreSQL via Prisma ORM, Socket.io for real-time updates.
 
 ## Development Commands
 

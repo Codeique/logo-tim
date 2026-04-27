@@ -68,7 +68,7 @@ export const makeSession = (overrides: Record<string, unknown> = {}) => ({
   startTime: '10:00',
   duration: 60,
   status: SessionStatus.SCHEDULED,
-  treatmentType: 'Logopedski tretman',
+  treatmentType: 'Terapeutski tretman',
   isPaid: false,
   report: null,
   createdAt: new Date('2024-01-01'),

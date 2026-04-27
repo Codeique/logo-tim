@@ -140,7 +140,7 @@ export default function PatientFormDialog({ open, onClose, patient }) {
               error={!!errors.sessionPrice} helperText={errors.sessionPrice} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField required fullWidth select label="Dodeljeni logoped" value={form.primaryTherapistId} onChange={set('primaryTherapistId')}
+            <TextField required fullWidth select label="Dodeljeni terapeut" value={form.primaryTherapistId} onChange={set('primaryTherapistId')}
               error={!!errors.primaryTherapistId} helperText={errors.primaryTherapistId}>
               <MenuItem value="">Niko</MenuItem>
               {(therapists || []).map(t => (

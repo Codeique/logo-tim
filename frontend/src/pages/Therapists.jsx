@@ -292,7 +292,7 @@ export default function TherapistsPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
             <Person sx={{ color: 'primary.main', fontSize: 22 }} />
             <Typography variant="h6" fontWeight={700} fontSize={18}>
-              Logopedi ({filtered.length})
+              Terapeuti ({filtered.length})
             </Typography>
           </Box>
 
@@ -311,7 +311,7 @@ export default function TherapistsPage() {
               '&:hover': { boxShadow: '0 2px 8px rgba(74,144,226,0.35)' },
             }}
           >
-            Dodaj logopeda
+            Dodaj terapeuta
           </Button>
         </Box>
 
@@ -321,7 +321,7 @@ export default function TherapistsPage() {
           {/* Search */}
           <Box sx={{ mb: 3 }}>
             <TextField
-              placeholder="Pretraži logopede..."
+              placeholder="Pretraži terapeute..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
@@ -357,7 +357,7 @@ export default function TherapistsPage() {
                 }}>
                   <Person sx={{ fontSize: 52, color: 'text.disabled', mb: 1.5 }} />
                   <Typography color="text.secondary" fontWeight={600} fontSize={15}>
-                    Nema pronađenih logopeda
+                    Nema pronađenih terapeuta
                   </Typography>
                   <Typography variant="caption" color="text.disabled" display="block" mt={0.5}>
                     Pokušajte sa drugačijim pretragom
@@ -387,7 +387,7 @@ export default function TherapistsPage() {
 
       {/* ── Delete confirmation ──────────────────────────────────── */}
       <Dialog open={Boolean(deleteId)} onClose={() => setDeleteId(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Obriši logopeda?</DialogTitle>
+        <DialogTitle>Obriši terapeuta?</DialogTitle>
         <DialogContent>
           <Typography color="text.secondary">
             Ova akcija ne može biti poništena. Korisnik će biti trajno obrisan.

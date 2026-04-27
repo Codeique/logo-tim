@@ -54,7 +54,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
       : api.post('/therapists', data).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['therapists'] });
-      toast.success(therapist ? 'Logoped ažuriran' : 'Logoped kreiran');
+      toast.success(therapist ? 'Terapeut ažuriran' : 'Terapeut kreiran');
       onClose();
     },
     onError: (e) => toast.error(e.response?.data?.message || 'Greška'),
@@ -74,7 +74,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
 
   const handleSubmit = () => {
     if (!form.firstName || !form.lastName || !form.email) return toast.error('Ime i email su obavezni');
-    if (!isEdit && !form.password) return toast.error('Lozinka je obavezna za novog logopeda');
+    if (!isEdit && !form.password) return toast.error('Lozinka je obavezna za novog terapeuta');
     const payload = {
       ...form,
       hourlyRate: form.hourlyRate === '' ? 0 : parseFloat(form.hourlyRate),
@@ -105,7 +105,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
         pb: 1.5,
       }}>
         <Typography fontWeight={700} fontSize={17}>
-          {isEdit ? 'Izmeni logopeda' : 'Dodaj logopeda'}
+          {isEdit ? 'Izmeni terapeuta' : 'Dodaj terapeuta'}
         </Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary', mr: -0.5 }}>
           <Close fontSize="small" />
