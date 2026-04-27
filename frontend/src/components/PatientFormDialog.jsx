@@ -87,7 +87,7 @@ export default function PatientFormDialog({ open, onClose, patient }) {
     if (!form.birthDate) errs.birthDate = 'Obavezno polje';
     if (!form.phone.trim()) errs.phone = 'Obavezno polje';
     if (!form.diagnosis.trim()) errs.diagnosis = 'Obavezno polje';
-    if (form.sessionPrice === '' || form.sessionPrice === null) errs.sessionPrice = 'Obavezno polje';
+    if (!form.isMilitary && (form.sessionPrice === '' || form.sessionPrice === null)) errs.sessionPrice = 'Obavezno polje';
     if (!form.primaryTherapistId) errs.primaryTherapistId = 'Obavezno polje';
     if (form.isMilitary) {
       if (!form.nationalId.trim()) errs.nationalId = 'Obavezno polje';
@@ -135,10 +135,12 @@ export default function PatientFormDialog({ open, onClose, patient }) {
             <TextField required fullWidth label="Telefon" value={form.phone} onChange={set('phone')}
               error={!!errors.phone} helperText={errors.phone} />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField required fullWidth label="Cena tretmana (RSD)" type="number" value={form.sessionPrice} onChange={set('sessionPrice')}
-              error={!!errors.sessionPrice} helperText={errors.sessionPrice} />
-          </Grid>
+          {!form.isMilitary && (
+            <Grid item xs={12} sm={6}>
+              <TextField required fullWidth label="Cena tretmana (RSD)" type="number" value={form.sessionPrice} onChange={set('sessionPrice')}
+                error={!!errors.sessionPrice} helperText={errors.sessionPrice} />
+            </Grid>
+          )}
           <Grid item xs={12} sm={6}>
             <TextField required fullWidth select label="Dodeljeni terapeut" value={form.primaryTherapistId} onChange={set('primaryTherapistId')}
               error={!!errors.primaryTherapistId} helperText={errors.primaryTherapistId}>
