@@ -355,7 +355,7 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           ) : (
             <Chip
               icon={<HealthAndSafety sx={{ fontSize: '12px !important' }} />}
-              label="Državni osiguranik"
+              label="Civil"
               size="small"
               sx={{
                 bgcolor: 'rgba(74,144,226,0.07)',
