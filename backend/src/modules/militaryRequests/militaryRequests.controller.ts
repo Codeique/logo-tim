@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { emitEvent } from '../../socket';
 import { getPatientId } from '../../lib/profileCache';
+import { computeStatus } from './militaryRequests.service';
 
 interface MilitaryRequestQuery {
   patientId?: string;
@@ -41,7 +42,7 @@ export const list = async (req: Request<{}, {}, {}, MilitaryRequestQuery>, res: 
       orderBy: { createdAt: 'desc' },
       take: 200,
     });
-    res.json(requests);
+    res.json(requests.map(r => ({ ...r, status: computeStatus(r.validFrom, r.validUntil) })));
   } catch (err) { next(err); }
 };
 

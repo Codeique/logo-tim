@@ -64,7 +64,7 @@ export default function CalendarPage() {
     const dayStr = format(day, 'yyyy-MM-dd');
     return sessions.filter(s => {
       if (s.date?.slice(0, 10) !== dayStr) return false;
-      const [h] = (s.startTime ? s.startTime.slice(11, 16) : '00:00').split(':').map(Number);
+      const [h] = (s.startTime || '00:00').split(':').map(Number);
       return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
     });
   };
@@ -74,13 +74,13 @@ export default function CalendarPage() {
     return sessions.filter(s => {
       if (s.date?.slice(0, 10) !== dayStr) return false;
       if (s.roomId !== roomId) return false;
-      const [h] = (s.startTime ? s.startTime.slice(11, 16) : '00:00').split(':').map(Number);
+      const [h] = (s.startTime || '00:00').split(':').map(Number);
       return h >= HOURS[0] && h <= HOURS[HOURS.length - 1];
     });
   };
 
   const getSessionTop = (session) => {
-    const [h, m] = (session.startTime ? session.startTime.slice(11, 16) : '00:00').split(':').map(Number);
+    const [h, m] = (session.startTime || '00:00').split(':').map(Number);
     return (h - HOURS[0]) * ROW_HEIGHT + (m / 60) * ROW_HEIGHT;
   };
 
@@ -90,7 +90,7 @@ export default function CalendarPage() {
   };
 
   const getTimeMinutes = (session) => {
-    const [h, m] = (session.startTime ? session.startTime.slice(11, 16) : '00:00').split(':').map(Number);
+    const [h, m] = (session.startTime || '00:00').split(':').map(Number);
     return h * 60 + m;
   };
 
@@ -203,7 +203,7 @@ export default function CalendarPage() {
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', overflow: 'hidden' }}>
             <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {s.startTime?.slice(11, 16)} {s.patient?.firstName} {s.patient?.lastName}
+              {s.startTime} {s.patient?.firstName} {s.patient?.lastName}
             </Box>
             {s.status === 'COMPLETED' && !s.isPaid && (
               <Box component="span" sx={{ flexShrink: 0, fontSize: 10, bgcolor: '#F59E0B', color: '#fff', borderRadius: '3px', px: '3px', lineHeight: '14px', fontWeight: 700 }}>
@@ -232,20 +232,32 @@ export default function CalendarPage() {
               key={day.toISOString()}
               sx={{
                 flex: 1, p: 1.5, textAlign: 'center',
-                bgcolor: isToday ? 'rgba(74,144,226,0.06)' : 'transparent',
+                bgcolor: isToday ? 'rgba(74,144,226,0.09)' : 'transparent',
                 borderRight: '1px solid', borderColor: 'divider',
+                boxShadow: isToday ? 'inset 0 2px 0 #4A90E2' : 'none',
                 '&:last-child': { borderRight: 0 },
               }}
             >
-              <Typography variant="caption" color="text.secondary" display="block" fontWeight={500}
+              <Typography variant="caption" display="block" fontWeight={isToday ? 700 : 500}
+                color={isToday ? 'primary.main' : 'text.secondary'}
                 sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 10 }}>
                 {format(day, 'EEE', { locale: srLatn })}
               </Typography>
-              <Typography variant="body1" fontWeight={isToday ? 800 : 500}
-                color={isToday ? 'primary.main' : 'text.primary'}
-                sx={{ fontSize: isToday ? 16 : 14 }}>
-                {format(day, 'd')}
-              </Typography>
+              {isToday ? (
+                <Box sx={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 28, height: 28, borderRadius: '50%',
+                  bgcolor: 'primary.main', mt: 0.25, mx: 'auto',
+                }}>
+                  <Typography sx={{ color: '#fff', fontSize: 14, fontWeight: 800, lineHeight: 1 }}>
+                    {format(day, 'd')}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body1" fontWeight={500} color="text.primary" sx={{ fontSize: 14 }}>
+                  {format(day, 'd')}
+                </Typography>
+              )}
             </Box>
           );
         })}
@@ -275,8 +287,8 @@ export default function CalendarPage() {
                       flex: 1, borderRight: '1px solid', borderColor: 'divider',
                       '&:last-child': { borderRight: 0 }, cursor: 'pointer',
                       transition: 'background 0.1s',
-                      bgcolor: isToday ? 'rgba(74,144,226,0.02)' : 'transparent',
-                      '&:hover': { bgcolor: isToday ? 'rgba(74,144,226,0.05)' : 'action.hover' },
+                      bgcolor: isToday ? 'rgba(74,144,226,0.05)' : 'transparent',
+                      '&:hover': { bgcolor: isToday ? 'rgba(74,144,226,0.10)' : 'action.hover' },
                     }}
                   />
                 );
@@ -299,10 +311,11 @@ export default function CalendarPage() {
   const renderDayGrid = () => {
     const columns = dayViewRooms;
     const numCols = columns.length || 1;
+    const isTodayView = isSameDay(currentDate, new Date());
 
     return (
       <Box sx={{ minWidth: Math.max(420, numCols * 180) }}>
-        <Box sx={{ display: 'flex', borderBottom: '2px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+        <Box sx={{ display: 'flex', borderBottom: '2px solid', borderColor: 'divider', bgcolor: 'background.default', boxShadow: isTodayView ? 'inset 0 2px 0 #4A90E2' : 'none' }}>
           <Box sx={{ width: 64, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.default' }} />
           {columns.length === 0 ? (
             <Box sx={{ flex: 1, p: 1.5, textAlign: 'center' }}>
@@ -433,17 +446,20 @@ export default function CalendarPage() {
         </Box>
       </Box>
 
-      <Card variant="outlined" sx={{ mb: 2, px: 2, py: 1.5 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'flex-start' }}>
+      <Card variant="outlined" sx={{ mb: 2, px: 1.5, py: 1 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-start' }}>
           <Box>
-            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', mb: 0.75 }}>
+            <Typography variant="caption" color="text.disabled" fontWeight={700}
+              sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 9.5, display: 'block', mb: 0.5 }}>
               Status tretmana
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {Object.entries(SESSION_STATUS).map(([key, cfg]) => (
-                <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: '3px', bgcolor: cfg.bg, flexShrink: 0 }} />
-                  <Typography variant="caption" color="text.secondary" fontWeight={500}>{cfg.label}</Typography>
+                <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '2px', bgcolor: cfg.bg, flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: 11 }}>
+                    {cfg.label}
+                  </Typography>
                 </Box>
               ))}
             </Box>
@@ -452,17 +468,18 @@ export default function CalendarPage() {
           <Box sx={{ width: '1px', bgcolor: 'divider', alignSelf: 'stretch', display: { xs: 'none', sm: 'block' } }} />
 
           <Box>
-            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', mb: 0.75 }}>
+            <Typography variant="caption" color="text.disabled" fontWeight={700}
+              sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 9.5, display: 'block', mb: 0.5 }}>
               Oznake na kartici
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Box sx={{ width: 3, height: 16, bgcolor: '#F59E0B', borderRadius: '2px', flexShrink: 0 }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>Nije naplaćeno</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 3, height: 14, bgcolor: '#F59E0B', borderRadius: '2px', flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: 11 }}>Nije naplaćeno</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Box component="span" sx={{ fontSize: 10, bgcolor: '#F59E0B', color: '#fff', borderRadius: '3px', px: '4px', lineHeight: '16px', fontWeight: 700 }}>€</Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>Oznaka neplaćenog tretmana</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box component="span" sx={{ fontSize: 9, bgcolor: '#F59E0B', color: '#fff', borderRadius: '3px', px: '3px', lineHeight: '14px', fontWeight: 700 }}>€</Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: 11 }}>Naknada nije uplaćena</Typography>
               </Box>
             </Box>
           </Box>
@@ -470,21 +487,22 @@ export default function CalendarPage() {
           <Box sx={{ width: '1px', bgcolor: 'divider', alignSelf: 'stretch', display: { xs: 'none', sm: 'block' } }} />
 
           <Box>
-            <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', mb: 0.75 }}>
+            <Typography variant="caption" color="text.disabled" fontWeight={700}
+              sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 9.5, display: 'block', mb: 0.5 }}>
               Interakcija
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Box sx={{ width: 12, height: 12, borderRadius: '2px', border: '1.5px dashed', borderColor: 'text.disabled', flexShrink: 0 }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>Klik na slobodan slot → zakaži tretman</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 10, height: 10, borderRadius: '2px', border: '1.5px dashed', borderColor: 'text.disabled', flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: 11 }}>Slobodan slot → zakaži</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: 'action.selected', flexShrink: 0 }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>Klik na karticu → izmeni tretman</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 10, height: 10, borderRadius: '2px', bgcolor: 'action.selected', flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: 11 }}>Kartica → izmeni</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'primary.main', opacity: 0.25, flexShrink: 0 }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>Plava kolona = današnji dan</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'primary.main', opacity: 0.25, flexShrink: 0 }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: 11 }}>Plava kolona = danas</Typography>
               </Box>
             </Box>
           </Box>

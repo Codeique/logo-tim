@@ -284,7 +284,7 @@ export default function PatientDetailPage() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <InfoRow
                   label="Terapeut"
-                  value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : null}
+                  value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : 'Nije dodeljen'}
                 />
                 {!patient.isMilitary && (
                   <InfoRow
@@ -389,7 +389,7 @@ export default function PatientDetailPage() {
                     {patient.sessions?.map(s => (
                       <TableRow key={s.id} hover>
                         <TableCell>{format(new Date(s.date), 'dd.MM.yyyy')}</TableCell>
-                        <TableCell>{s.startTime?.slice(11, 16)}</TableCell>
+                        <TableCell>{s.startTime}</TableCell>
                         <TableCell>{s.therapist?.firstName} {s.therapist?.lastName}</TableCell>
                         <TableCell>{s.room?.name || '—'}</TableCell>
                         <TableCell>{s.duration} min</TableCell>

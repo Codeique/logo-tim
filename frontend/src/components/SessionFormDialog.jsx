@@ -27,7 +27,7 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
         therapistId: session.therapistId || '',
         roomId: session.roomId || '',
         date: session.date ? session.date.split('T')[0] : '',
-        startTime: session.startTime ? session.startTime.slice(11, 16) : '',
+        startTime: session.startTime || '',
         duration: session.duration || '45',
         treatmentType: session.treatmentType || '',
         status: session.status || 'SCHEDULED',
@@ -93,6 +93,10 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
     onError: (e) => {
       if (e.response?.status === 409) {
         setConflictError(e.response.data.message);
+      } else if (e.response?.status === 422) {
+        const errs = e.response.data?.errors;
+        const msg = Array.isArray(errs) ? errs.map(er => er.msg).join(', ') : 'Nevalidni podaci';
+        toast.error(msg);
       } else {
         toast.error(e.response?.data?.message || 'Greška');
       }
@@ -108,7 +112,18 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
     if (!form.patientId || !form.therapistId || !form.date || !form.startTime) {
       return toast.error('Pacijent, terapeut, datum i vreme su obavezni');
     }
-    mutation.mutate(form);
+    const payload = { ...form };
+    // roomId: in edit mode send null to clear; in create mode omit (backend defaults to null)
+    if (!payload.roomId) {
+      if (session) payload.roomId = null;
+      else delete payload.roomId;
+    }
+    // treatmentType: in edit mode send null to clear; in create mode omit
+    if (!payload.treatmentType) {
+      if (session) payload.treatmentType = null;
+      else delete payload.treatmentType;
+    }
+    mutation.mutate(payload);
   };
 
   return (

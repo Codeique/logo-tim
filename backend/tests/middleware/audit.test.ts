@@ -5,6 +5,8 @@ import { auditLog } from '../../src/middleware/audit';
 const makeReq = (user?: { id: number }, params: Record<string, string> = {}): Partial<Request> => ({
   user: user as any,
   params,
+  headers: {} as any,
+  ip: undefined,
 });
 
 function makeRes(statusCode: number) {

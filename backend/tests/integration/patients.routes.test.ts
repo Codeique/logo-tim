@@ -94,7 +94,7 @@ describe('PUT /api/patients/:id (BUG-06 audit log)', () => {
   it('fetches old value then updates and writes audit log', async () => {
     asAdmin();
     const patient = makePatient();
-    prismaMock.patient.findUnique.mockResolvedValue(patient as any);
+    prismaMock.patient.findFirst.mockResolvedValue(patient as any);
     prismaMock.patient.update.mockResolvedValue({ ...patient, firstName: 'Updated' } as any);
     prismaMock.auditLog.create.mockResolvedValue({} as any);
 
@@ -117,7 +117,7 @@ describe('PUT /api/patients/:id (BUG-06 audit log)', () => {
 
   it('returns 404 if patient does not exist', async () => {
     asAdmin();
-    prismaMock.patient.findUnique.mockResolvedValue(null);
+    prismaMock.patient.findFirst.mockResolvedValue(null);
 
     const res = await request(app)
       .put('/api/patients/999')
@@ -130,13 +130,14 @@ describe('PUT /api/patients/:id (BUG-06 audit log)', () => {
 describe('DELETE /api/patients/:id', () => {
   it('soft-deletes (deactivates) the patient', async () => {
     asAdmin();
+    prismaMock.patient.findFirst.mockResolvedValue({ userId: null } as any);
     prismaMock.patient.update.mockResolvedValue(makePatient({ isActive: false }) as any);
 
     const res = await request(app).delete('/api/patients/1');
 
     expect(res.status).toBe(200);
     expect(prismaMock.patient.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { isActive: false } }),
+      expect.objectContaining({ data: expect.objectContaining({ isActive: false }) }),
     );
   });
 });
@@ -144,7 +145,7 @@ describe('DELETE /api/patients/:id', () => {
 describe('PATCH /api/patients/:id/toggle-active', () => {
   it('toggles isActive from true to false', async () => {
     asAdmin();
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ isActive: true } as any);
+    prismaMock.patient.findFirstOrThrow.mockResolvedValue({ isActive: true } as any);
     prismaMock.patient.update.mockResolvedValue(makePatient({ isActive: false }) as any);
 
     const res = await request(app).patch('/api/patients/1/toggle-active');
@@ -155,7 +156,7 @@ describe('PATCH /api/patients/:id/toggle-active', () => {
 
   it('toggles isActive from false to true', async () => {
     asAdmin();
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ isActive: false } as any);
+    prismaMock.patient.findFirstOrThrow.mockResolvedValue({ isActive: false } as any);
     prismaMock.patient.update.mockResolvedValue(makePatient({ isActive: true }) as any);
 
     const res = await request(app).patch('/api/patients/1/toggle-active');

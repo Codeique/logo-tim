@@ -268,7 +268,7 @@ export default function TherapistsPage() {
   );
 
   return (
-    <Box sx={{ bgcolor: '#F4F6FB', minHeight: '100%', p: { xs: 0, sm: 0 } }}>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100%', p: { xs: 0, sm: 0 } }}>
       {/* ── White container ─────────────────────────────────────── */}
       <Box sx={{
         bgcolor: 'background.paper',

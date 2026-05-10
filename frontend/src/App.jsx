@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
 import axios from 'axios';
@@ -28,14 +28,28 @@ export default function App() {
   const [mode, setMode] = useState(() => localStorage.getItem('themeMode') || 'light');
   const [initializing, setInitializing] = useState(true);
   const theme = useMemo(() => getTheme(mode), [mode]);
+  // Prevents React 18 StrictMode from double-firing the init effect (which would
+  // rotate the refresh token on the first call then fail the second with 401 → logout).
+  const didInit = useRef(false);
   useSocket();
 
   useEffect(() => {
-    const { accessToken, setAuth, logout } = useAuthStore.getState();
+    if (didInit.current) return;
+    didInit.current = true;
+
+    const { user, accessToken, setAuth, logout } = useAuthStore.getState();
+
+    // Already have a live access token in memory (e.g. HMR without full page reload).
     if (accessToken) { setInitializing(false); return; }
+
+    // No persisted user means not logged in — skip the network call entirely.
+    if (!user) { setInitializing(false); return; }
+
+    // Persisted user exists but access token is gone (hard refresh / browser reopen).
+    // Call the refresh endpoint to get a fresh access token from the HttpOnly cookie.
     axios.post('/api/auth/refresh', {}, { withCredentials: true })
       .then(({ data }) => setAuth(data.user, data.accessToken))
-      .catch(() => logout())
+      .catch(() => logout()) // Cookie expired / invalid → clear persisted user, go to login
       .finally(() => setInitializing(false));
   }, []);
 

@@ -1,4 +1,4 @@
-import { Role, SessionStatus, RequestStatus, TransactionType } from '@prisma/client';
+import { Role, SessionStatus, TransactionType } from '@prisma/client';
 
 /** Mimics Prisma Decimal for test return values */
 export const decimal = (value: number) =>
@@ -52,10 +52,10 @@ export const makePatient = (overrides: Record<string, unknown> = {}) => ({
   insuranceHolder: null,
   medicalFileNumber: null,
   militaryPost: null,
-  therapistId: 1,
+  primaryTherapistId: 1,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
-  therapist: { id: 1, firstName: 'Ana', lastName: 'Petrović' },
+  primaryTherapist: { id: 1, firstName: 'Ana', lastName: 'Petrović' },
   ...overrides,
 });
 
@@ -116,7 +116,7 @@ export const makeMilitaryRequest = (overrides: Record<string, unknown> = {}) => 
   id: 1,
   patientId: 1,
   requestNumber: 'MR-001',
-  status: RequestStatus.ACTIVE,
+  status: 'ACTIVE' as const,
   totalSessions: 10,
   usedSessions: 2,
   validFrom: new Date('2025-01-01'),

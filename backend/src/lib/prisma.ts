@@ -1,13 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import logger from './logger';
-
-function computeMilitaryStatus(validFrom: Date, validUntil: Date): 'ACTIVE' | 'EXPIRED' {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const from = new Date(validFrom); from.setHours(0, 0, 0, 0);
-  const until = new Date(validUntil); until.setHours(23, 59, 59, 999);
-  return today >= from && today <= until ? 'ACTIVE' : 'EXPIRED';
-}
+import { computeStatus } from '../modules/militaryRequests/militaryRequests.service';
 
 const base = new PrismaClient({
   log: [
@@ -29,7 +22,7 @@ const prisma = base.$extends({
     militaryRequest: {
       status: {
         needs: { validFrom: true, validUntil: true },
-        compute: (r) => computeMilitaryStatus(r.validFrom, r.validUntil),
+        compute: (r) => computeStatus(r.validFrom, r.validUntil),
       },
     },
   },

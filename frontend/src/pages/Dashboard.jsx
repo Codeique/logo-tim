@@ -247,7 +247,7 @@ function PatientDashboard() {
                     {patient.sessions?.map(s => (
                       <TableRow key={s.id} hover>
                         <TableCell>{format(new Date(s.date), 'dd.MM.yyyy')}</TableCell>
-                        <TableCell>{s.startTime?.slice(11, 16)}</TableCell>
+                        <TableCell>{s.startTime}</TableCell>
                         <TableCell>{s.therapist?.firstName} {s.therapist?.lastName}</TableCell>
                         <TableCell>{s.room?.name || '—'}</TableCell>
                         <TableCell>{s.duration} min</TableCell>
@@ -445,7 +445,10 @@ export default function DashboardPage() {
   const completed = todaySessions.filter(s => s.status === 'COMPLETED');
   const canceled = todaySessions.filter(s => s.status === 'CANCELED');
 
-  const displayName = user?.email?.split('@')[0] || '';
+  const displayName =
+    user?.therapist?.firstName && user?.therapist?.lastName
+      ? `${user.therapist.firstName} ${user.therapist.lastName}`
+      : user?.email?.split('@')[0] || '';
 
   return (
     <Box>
@@ -547,7 +550,7 @@ export default function DashboardPage() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
                           <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontSize: 12 }}>
-                            {s.startTime?.slice(11, 16)}
+                            {s.startTime}
                           </Typography>
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>

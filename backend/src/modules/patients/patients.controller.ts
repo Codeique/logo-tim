@@ -23,14 +23,14 @@ interface PatientCreateBody {
   phone?: string;
   diagnosis?: string;
   notes?: string;
-  sessionPrice?: number;
+  sessionPrice?: number | string;
   isActive?: boolean;
   isMilitary?: boolean;
   nationalId?: string;
   insuranceHolder?: string;
   medicalFileNumber?: string;
   militaryPost?: string;
-  primaryTherapistId?: number | string;
+  therapistId?: number | string;
 }
 
 interface PatientUpdateBody extends Partial<PatientCreateBody> {}
@@ -137,14 +137,14 @@ export const create = async (req: Request<{}, {}, PatientCreateBody>, res: Respo
         phone: data.phone,
         diagnosis: data.diagnosis,
         notes: data.notes,
-        sessionPrice: data.sessionPrice ?? 0,
+        sessionPrice: data.sessionPrice !== undefined && data.sessionPrice !== '' ? data.sessionPrice : 0,
         isActive: data.isActive !== false,
         isMilitary: data.isMilitary ?? false,
         nationalId: data.nationalId,
         insuranceHolder: data.insuranceHolder,
         medicalFileNumber: data.medicalFileNumber,
         militaryPost: data.militaryPost,
-        primaryTherapistId: data.primaryTherapistId ? parseInt(String(data.primaryTherapistId)) : null,
+        primaryTherapistId: data.therapistId ? parseInt(String(data.therapistId)) : null,
       },
       include: { primaryTherapist: { select: { id: true, firstName: true, lastName: true } } },
     });
@@ -170,15 +170,15 @@ export const update = async (req: Request<{ id: string }, {}, PatientUpdateBody>
         phone: data.phone,
         diagnosis: data.diagnosis,
         notes: data.notes,
-        sessionPrice: data.sessionPrice,
+        sessionPrice: data.sessionPrice !== undefined && data.sessionPrice !== '' ? data.sessionPrice : undefined,
         isActive: data.isActive,
         isMilitary: data.isMilitary,
         nationalId: data.nationalId,
         insuranceHolder: data.insuranceHolder,
         medicalFileNumber: data.medicalFileNumber,
         militaryPost: data.militaryPost,
-        primaryTherapistId: data.primaryTherapistId !== undefined
-          ? (data.primaryTherapistId ? parseInt(String(data.primaryTherapistId)) : null)
+        primaryTherapistId: data.therapistId !== undefined
+          ? (data.therapistId ? parseInt(String(data.therapistId)) : null)
           : undefined,
       },
       include: { primaryTherapist: { select: { id: true, firstName: true, lastName: true } } },
