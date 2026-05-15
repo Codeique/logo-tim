@@ -219,10 +219,37 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
         },
       }}
     >
-      <CardContent sx={{ p: '16px !important', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ p: '16px !important', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
-        {/* Avatar + Age badge */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125, position: 'relative' }}>
+        {/* Age badge — anchored to top-right of the card */}
+        {age && (
+          <Box sx={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            bgcolor: p.isMilitary ? 'rgba(245,158,11,0.12)' : 'rgba(74,144,226,0.1)',
+            border: '1px solid',
+            borderColor: p.isMilitary ? 'rgba(245,158,11,0.35)' : 'rgba(74,144,226,0.25)',
+            borderRadius: '6px',
+            px: 0.75,
+            py: 0.15,
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}>
+            <Typography sx={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              color: p.isMilitary ? 'warning.dark' : 'primary.dark',
+              letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+            }}>
+              {age}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Avatar */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125 }}>
           <Avatar sx={{
             width: 54,
             height: 54,
@@ -238,31 +265,6 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           }}>
             {initials}
           </Avatar>
-          {age && (
-            <Box sx={{
-              position: 'absolute',
-              top: -4,
-              right: '10%',
-              bgcolor: p.isMilitary ? 'rgba(245,158,11,0.12)' : 'rgba(74,144,226,0.1)',
-              border: '1px solid',
-              borderColor: p.isMilitary ? 'rgba(245,158,11,0.35)' : 'rgba(74,144,226,0.25)',
-              borderRadius: '6px',
-              px: 0.75,
-              py: 0.15,
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}>
-              <Typography sx={{
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                color: p.isMilitary ? 'warning.dark' : 'primary.dark',
-                letterSpacing: '0.02em',
-                whiteSpace: 'nowrap',
-              }}>
-                Godine: {age}
-              </Typography>
-            </Box>
-          )}
         </Box>
 
         {/* Full name */}

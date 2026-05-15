@@ -39,8 +39,21 @@ describe('completeSession — happy path (non-military)', () => {
     );
   });
 
-  it('calculates therapistEarning = hourlyRate * durationHours', async () => {
-    // hourlyRate=50, duration=60min → 50 * 1 = 50
+  it('therapistEarning = fixed hourlyRate regardless of duration', async () => {
+    // hourlyRate=50 → therapistEarning=50 for any session duration
+    await completeSession(1);
+    expect(prismaMock.finance.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ therapistEarning: 50 }),
+      }),
+    );
+  });
+
+  it('therapistEarning is unchanged when session duration is 45 minutes (not 60)', async () => {
+    const shortSession = makeSession({ status: SessionStatus.SCHEDULED, duration: 45 });
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(shortSession as any);
+    prismaMock.session.update.mockResolvedValue({ ...shortSession, status: SessionStatus.COMPLETED } as any);
+
     await completeSession(1);
     expect(prismaMock.finance.upsert).toHaveBeenCalledWith(
       expect.objectContaining({

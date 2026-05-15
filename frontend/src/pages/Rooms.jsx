@@ -14,6 +14,7 @@ export default function RoomsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRoom, setEditRoom] = useState(null);
   const [name, setName] = useState('');
+  const [nameTouched, setNameTouched] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
 
@@ -38,6 +39,7 @@ export default function RoomsPage() {
       toast.success(editRoom ? 'Prostorija ažurirana' : 'Prostorija dodana');
       setDialogOpen(false);
       setName('');
+      setNameTouched(false);
     },
     onError: (e) => toast.error(e.response?.data?.message || 'Greška'),
   });
@@ -55,6 +57,7 @@ export default function RoomsPage() {
   const handleOpen = (room = null) => {
     setEditRoom(room);
     setName(room?.name || '');
+    setNameTouched(false);
     setDialogOpen(true);
   };
 
@@ -264,22 +267,25 @@ export default function RoomsPage() {
       </Box>
 
       {/* Add/Edit dialog */}
-      <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setName(''); }} maxWidth="xs" fullWidth disableRestoreFocus>
+      <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setName(''); setNameTouched(false); }} maxWidth="xs" fullWidth disableRestoreFocus>
         <DialogTitle>{editRoom ? 'Izmeni prostoriju' : 'Dodaj prostoriju'}</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
-            label="Naziv prostorije"
+            label="Naziv prostorije *"
             value={name}
             onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && name.trim() && saveMutation.mutate({ name })}
+            onBlur={() => setNameTouched(true)}
+            onKeyDown={e => { if (e.key === 'Enter' && name.trim()) saveMutation.mutate({ name }); }}
             autoFocus
             InputLabelProps={{ shrink: true }}
+            error={nameTouched && !name.trim()}
+            helperText={nameTouched && !name.trim() ? 'Ovo polje je obavezno.' : ''}
             sx={{ mt: 1 }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setDialogOpen(false); setName(''); }} variant="outlined" color="inherit">
+          <Button onClick={() => { setDialogOpen(false); setName(''); setNameTouched(false); }} variant="outlined" color="inherit">
             Otkaži
           </Button>
           <Button

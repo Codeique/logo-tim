@@ -149,9 +149,8 @@ async function main() {
     if (session.status === 'COMPLETED') {
       const therapist = therapists.find(t => t.id === session.therapistId);
       const patient = patients.find(p => p.id === session.patientId);
-      const durationHours = session.duration / 60;
-      const therapistEarning = parseFloat(therapist.hourlyRate) * durationHours;
-      const companyIncome = parseFloat(patient.sessionPrice) - therapistEarning;
+      const therapistEarning = parseFloat(therapist.hourlyRate);
+      const companyIncome = Math.max(parseFloat(patient.sessionPrice) - therapistEarning, 0);
       await prisma.finance.create({
         data: {
           sessionId: session.id,

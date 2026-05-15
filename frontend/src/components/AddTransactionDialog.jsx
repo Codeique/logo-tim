@@ -10,9 +10,11 @@ import api from '../api/axios';
 export default function AddTransactionDialog({ open, onClose, patientId }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({ patientId: patientId || '', amount: '', type: 'PAYMENT', note: '' });
+  const [touched, setTouched] = useState({});
 
   useEffect(() => {
-    setForm(f => ({ ...f, patientId: patientId || '' }));
+    setForm({ patientId: patientId || '', amount: '', type: 'PAYMENT', note: '' });
+    setTouched({});
   }, [patientId, open]);
 
   const { data: patients = [] } = useQuery({
@@ -38,13 +40,35 @@ export default function AddTransactionDialog({ open, onClose, patientId }) {
     onError: (e) => toast.error(e.response?.data?.message || 'Greška'),
   });
 
+  // Pure validation — computed every render
+  const validate = (f) => {
+    const errs = {};
+    if (!patientId && !f.patientId) errs.patientId = 'Odaberite pacijenta.';
+    if (!f.amount) errs.amount = 'Ovo polje je obavezno.';
+    else if (parseFloat(f.amount) <= 0) errs.amount = 'Iznos mora biti veći od 0.';
+    return errs;
+  };
+
+  const errors = validate(form);
+  const isValid = Object.keys(errors).length === 0;
+
+  const handleBlur = (field) => () => setTouched(t => ({ ...t, [field]: true }));
+
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
 
+  // Select inputs — mark touched immediately on change
+  const setSelect = (field) => (e) => {
+    setForm(f => ({ ...f, [field]: e.target.value }));
+    setTouched(t => ({ ...t, [field]: true }));
+  };
+
   const handleSubmit = () => {
-    if (!form.patientId || !form.amount) return toast.error('Pacijent i iznos su obavezni');
-    if (parseFloat(form.amount) <= 0) return toast.error('Iznos mora biti pozitivan');
+    if (!isValid) return;
     mutation.mutate(form);
   };
+
+  const err = (field) => !!(touched[field] && errors[field]);
+  const help = (field) => touched[field] ? (errors[field] || '') : '';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -53,7 +77,11 @@ export default function AddTransactionDialog({ open, onClose, patientId }) {
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           {!patientId && (
             <Grid item xs={12}>
-              <TextField fullWidth select label="Pacijent *" value={form.patientId} onChange={set('patientId')}>
+              <TextField
+                fullWidth select label="Pacijent *"
+                value={form.patientId} onChange={setSelect('patientId')}
+                error={err('patientId')} helperText={help('patientId')}
+              >
                 <MenuItem value=""><em>Odaberi pacijenta</em></MenuItem>
                 {(patients || []).map(p => (
                   <MenuItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</MenuItem>
@@ -62,7 +90,12 @@ export default function AddTransactionDialog({ open, onClose, patientId }) {
             </Grid>
           )}
           <Grid item xs={12} sm={6}>
-            <TextField fullWidth label="Iznos (RSD) *" type="number" value={form.amount} onChange={set('amount')} inputProps={{ min: 0, step: 0.01 }} />
+            <TextField
+              fullWidth label="Iznos (RSD) *" type="number"
+              value={form.amount} onChange={set('amount')} onBlur={handleBlur('amount')}
+              inputProps={{ min: 0, step: 0.01 }}
+              error={err('amount')} helperText={help('amount')}
+            />
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField fullWidth select label="Tip" value={form.type} onChange={set('type')}>
@@ -77,7 +110,7 @@ export default function AddTransactionDialog({ open, onClose, patientId }) {
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" color="inherit" onClick={onClose}>Otkaži</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={mutation.isPending}>
+        <Button variant="contained" onClick={handleSubmit} disabled={!isValid || mutation.isPending}>
           {mutation.isPending ? <CircularProgress size={20} color="inherit" /> : 'Dodaj'}
         </Button>
       </DialogActions>

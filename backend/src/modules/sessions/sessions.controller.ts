@@ -118,6 +118,22 @@ export const create = async (req: Request<{}, {}, SessionCreateBody>, res: Respo
   try {
     const { patientId, therapistId, roomId, date, startTime, duration, treatmentType, status } = req.body;
 
+    // Room authorization: therapists may only book rooms assigned to them
+    if (roomId && isTherapistRole(req.user.role)) {
+      const tId = await getTherapistId(req.user.id);
+      if (tId) {
+        const therapist = await prisma.therapist.findUnique({
+          where: { id: tId },
+          select: { rooms: { select: { id: true } } },
+        });
+        const assignedIds = (therapist?.rooms ?? []).map(r => r.id);
+        if (!assignedIds.includes(parseInt(String(roomId)))) {
+          res.status(403).json({ message: 'Niste ovlašćeni da zakažete termin u ovoj prostoriji' });
+          return;
+        }
+      }
+    }
+
     const [roomConflict, therapistConflict] = await Promise.all([
       checkRoomConflict(roomId, date, startTime, duration),
       checkTherapistConflict(therapistId, date, startTime, duration),
@@ -152,6 +168,22 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
   try {
     const sessionId = parseInt(req.params.id);
     const { patientId, therapistId, roomId, date, startTime, duration, treatmentType, status, isPaid, report } = req.body;
+
+    // Room authorization: therapists may only set rooms assigned to them
+    if (roomId && isTherapistRole(req.user.role)) {
+      const tId = await getTherapistId(req.user.id);
+      if (tId) {
+        const therapist = await prisma.therapist.findUnique({
+          where: { id: tId },
+          select: { rooms: { select: { id: true } } },
+        });
+        const assignedIds = (therapist?.rooms ?? []).map(r => r.id);
+        if (!assignedIds.includes(parseInt(String(roomId)))) {
+          res.status(403).json({ message: 'Niste ovlašćeni da zakažete termin u ovoj prostoriji' });
+          return;
+        }
+      }
+    }
 
     if (date && startTime && duration && therapistId) {
       const [roomConflict, therapistConflict] = await Promise.all([

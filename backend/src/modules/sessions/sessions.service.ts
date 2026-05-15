@@ -93,8 +93,8 @@ export async function completeSession(
       tx.patient.findUniqueOrThrow({ where: { id: session.patientId } }),
     ]);
 
-    const durationHours = session.duration / 60;
-    const therapistEarning = therapist.hourlyRate.toNumber() * durationHours;
+    // Fixed earning per therapy — no duration factor
+    const therapistEarning = therapist.hourlyRate.toNumber();
     const companyIncome = Math.max(patient.sessionPrice.toNumber() - therapistEarning, 0);
 
     const finance = await tx.finance.upsert({

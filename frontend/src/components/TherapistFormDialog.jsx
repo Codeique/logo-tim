@@ -21,6 +21,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
   const qc = useQueryClient();
   const isEdit = Boolean(therapist);
   const [form, setForm] = useState(EMPTY);
+  const [touched, setTouched] = useState({});
 
   useEffect(() => {
     if (therapist) {
@@ -37,6 +38,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
     } else {
       setForm(EMPTY);
     }
+    setTouched({});
   }, [therapist, open]);
 
   const { data: rooms = [] } = useQuery({
@@ -60,6 +62,25 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
     onError: (e) => toast.error(e.response?.data?.message || 'Greška'),
   });
 
+  // Pure validation — called every render, no state needed
+  const validate = (f) => {
+    const errs = {};
+    if (!f.firstName.trim()) errs.firstName = 'Ovo polje je obavezno.';
+    if (!f.lastName.trim()) errs.lastName = 'Ovo polje je obavezno.';
+    if (!f.email.trim()) errs.email = 'Ovo polje je obavezno.';
+    else if (!/\S+@\S+\.\S+/.test(f.email)) errs.email = 'Email adresa nije validna.';
+    if (!isEdit) {
+      if (!f.password) errs.password = 'Lozinka je obavezna.';
+      else if (f.password.length < 8) errs.password = 'Lozinka mora imati najmanje 8 karaktera.';
+    }
+    return errs;
+  };
+
+  const errors = validate(form);
+  const isValid = Object.keys(errors).length === 0;
+
+  const handleBlur = (field) => () => setTouched(t => ({ ...t, [field]: true }));
+
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
 
   const toggleRoom = (id) => {
@@ -73,8 +94,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
   const clearAllRooms = () => setForm(f => ({ ...f, roomIds: [] }));
 
   const handleSubmit = () => {
-    if (!form.firstName || !form.lastName || !form.email) return toast.error('Ime i email su obavezni');
-    if (!isEdit && !form.password) return toast.error('Lozinka je obavezna za novog terapeuta');
+    if (!isValid) return;
     const payload = {
       ...form,
       hourlyRate: form.hourlyRate === '' ? 0 : parseFloat(form.hourlyRate),
@@ -125,7 +145,10 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
               label="Ime *"
               value={form.firstName}
               onChange={set('firstName')}
+              onBlur={handleBlur('firstName')}
               size="small"
+              error={!!(touched.firstName && errors.firstName)}
+              helperText={touched.firstName ? errors.firstName : ''}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -134,7 +157,10 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
               label="Prezime *"
               value={form.lastName}
               onChange={set('lastName')}
+              onBlur={handleBlur('lastName')}
               size="small"
+              error={!!(touched.lastName && errors.lastName)}
+              helperText={touched.lastName ? errors.lastName : ''}
             />
           </Grid>
 
@@ -146,7 +172,10 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
               type="email"
               value={form.email}
               onChange={set('email')}
+              onBlur={handleBlur('email')}
               size="small"
+              error={!!(touched.email && errors.email)}
+              helperText={touched.email ? errors.email : ''}
             />
           </Grid>
 
@@ -159,7 +188,10 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
                 type="password"
                 value={form.password}
                 onChange={set('password')}
+                onBlur={handleBlur('password')}
                 size="small"
+                error={!!(touched.password && errors.password)}
+                helperText={touched.password ? errors.password : 'Najmanje 8 karaktera'}
               />
             </Grid>
           )}
@@ -306,7 +338,7 @@ export default function TherapistFormDialog({ open, onClose, therapist }) {
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={mutation.isPending}
+          disabled={!isValid || mutation.isPending}
           sx={{
             borderRadius: 1,
             textTransform: 'none',
