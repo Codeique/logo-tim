@@ -3,7 +3,7 @@ import { Prisma, Role, SessionStatus } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { emitEvent } from '../../socket';
 import { isTherapistRole } from '../../lib/roles';
-import { checkRoomConflict, checkTherapistConflict, completeSession } from './sessions.service';
+import { checkRoomConflict, checkTherapistConflict, completeSession, adjustPatientBalance } from './sessions.service';
 import logger from '../../lib/logger';
 import { getTherapistId, getPatientId } from '../../lib/profileCache';
 
@@ -194,35 +194,74 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
       if (therapistConflict) { res.status(409).json({ message: 'Therapist is already booked at this time' }); return; }
     }
 
-    // If marking COMPLETED, delegate to service for atomic Finance + remainingSessions update
+    // If marking COMPLETED, delegate to service for atomic Finance + balance update
     if (status === SessionStatus.COMPLETED) {
-      const existing = await prisma.session.findUnique({ where: { id: sessionId }, select: { status: true } });
+      const existing = await prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { status: true, isPaid: true, balanceDeducted: true },
+      });
+
       if (existing?.status === SessionStatus.COMPLETED) {
-        // Already completed — skip re-completion (would double-count finance/sessions); just update fields normally
-        const session = await prisma.session.update({
+        // Already completed — skip re-completion; just update fields.
+        // Handle isPaid transitions with balance adjustment inside a transaction.
+        await prisma.$transaction(async (tx) => {
+          const current = await tx.session.findUniqueOrThrow({
+            where: { id: sessionId },
+            select: { isPaid: true, balanceDeducted: true, patientId: true },
+          });
+          const patient = await tx.patient.findUniqueOrThrow({
+            where: { id: current.patientId },
+            select: { isMilitary: true, sessionPrice: true },
+          });
+
+          const paidChanging = isPaid !== undefined && isPaid !== current.isPaid;
+          let newBalanceDeducted = current.balanceDeducted;
+
+          if (!patient.isMilitary && paidChanging) {
+            if (isPaid && !current.balanceDeducted) {
+              // Transitioning unpaid → paid: deduct balance
+              await adjustPatientBalance(tx, current.patientId, -patient.sessionPrice.toNumber());
+              newBalanceDeducted = true;
+            } else if (!isPaid && current.balanceDeducted) {
+              // Transitioning paid → unpaid: roll back deduction
+              await adjustPatientBalance(tx, current.patientId, patient.sessionPrice.toNumber());
+              newBalanceDeducted = false;
+            }
+          }
+
+          await tx.session.update({
+            where: { id: sessionId },
+            data: {
+              patientId: patientId ? parseInt(String(patientId)) : undefined,
+              therapistId: therapistId ? parseInt(String(therapistId)) : undefined,
+              roomId: roomId !== undefined ? (roomId ? parseInt(String(roomId)) : null) : undefined,
+              date: date ? new Date(date) : undefined,
+              startTime: startTime || undefined,
+              duration: duration ? parseInt(String(duration)) : undefined,
+              treatmentType,
+              isPaid,
+              balanceDeducted: newBalanceDeducted,
+              report,
+            },
+          });
+        });
+
+        const fullSession = await prisma.session.findUnique({
           where: { id: sessionId },
-          data: {
-            patientId: patientId ? parseInt(String(patientId)) : undefined,
-            therapistId: therapistId ? parseInt(String(therapistId)) : undefined,
-            roomId: roomId !== undefined ? (roomId ? parseInt(String(roomId)) : null) : undefined,
-            date: date ? new Date(date) : undefined,
-            startTime: startTime || undefined,
-            duration: duration ? parseInt(String(duration)) : undefined,
-            treatmentType,
-            isPaid,
-            report,
-          },
           include: {
             patient: { select: { id: true, firstName: true, lastName: true } },
             therapist: { select: { id: true, firstName: true, lastName: true } },
             room: true,
           },
         });
-        emitEvent('sessions:updated', { action: 'updated', session });
-        res.json(session);
+        emitEvent('sessions:updated', { action: 'updated', session: fullSession });
+        emitEvent('patients:updated', {});
+        res.json(fullSession);
         return;
       }
-      if (patientId || therapistId || roomId !== undefined || date || startTime || duration || treatmentType || isPaid !== undefined || report !== undefined) {
+
+      // First-time completion: pre-set non-payment fields, then delegate to service
+      if (patientId || therapistId || roomId !== undefined || date || startTime || duration || treatmentType !== undefined || report !== undefined) {
         await prisma.session.update({
           where: { id: sessionId },
           data: {
@@ -233,13 +272,16 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
             startTime: startTime || undefined,
             duration: duration ? parseInt(String(duration)) : undefined,
             treatmentType,
-            isPaid,
             report,
           },
         });
       }
-      const completed = await completeSession(sessionId);
+
+      // isPaid falls back to the session's existing value if not provided in the request
+      const effectivePaid = isPaid !== undefined ? isPaid : (existing?.isPaid ?? false);
+      const completed = await completeSession(sessionId, effectivePaid);
       logger.info('Session completed', { sessionId, patientId: completed.session.patientId, therapistId: completed.session.therapistId });
+
       const fullSession = await prisma.session.findUnique({
         where: { id: sessionId },
         include: {
@@ -250,6 +292,7 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
       });
       emitEvent('sessions:updated', { action: 'updated', session: fullSession });
       emitEvent('finance:updated', {});
+      emitEvent('patients:updated', {});
       res.json(fullSession);
       return;
     }
@@ -282,11 +325,33 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
 
 export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    await prisma.session.update({
-      where: { id: parseInt(req.params.id) },
-      data: { status: SessionStatus.CANCELED },
+    const sessionId = parseInt(req.params.id);
+
+    await prisma.$transaction(async (tx) => {
+      const session = await tx.session.findUniqueOrThrow({
+        where: { id: sessionId },
+        select: { balanceDeducted: true, patientId: true },
+      });
+
+      // If the session had its balance deducted, roll it back before canceling
+      if (session.balanceDeducted) {
+        const patient = await tx.patient.findUniqueOrThrow({
+          where: { id: session.patientId },
+          select: { isMilitary: true, sessionPrice: true },
+        });
+        if (!patient.isMilitary) {
+          await adjustPatientBalance(tx, session.patientId, patient.sessionPrice.toNumber());
+        }
+      }
+
+      await tx.session.update({
+        where: { id: sessionId },
+        data: { status: SessionStatus.CANCELED, balanceDeducted: false },
+      });
     });
-    emitEvent('sessions:updated', { action: 'canceled', id: parseInt(req.params.id) });
+
+    emitEvent('sessions:updated', { action: 'canceled', id: sessionId });
+    emitEvent('patients:updated', {});
     res.json({ message: 'Session canceled' });
   } catch (err) { next(err); }
 };

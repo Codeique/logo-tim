@@ -117,42 +117,28 @@ function MilitaryStatusBox({ activeRequest }) {
 // --- State patient status box (centered, compact) ---
 function StatePatientStatusBox({ p, isAdmin }) {
   const remainingSessions = Number(p.sessionPrice) > 0
-    ? Math.floor(Number(p.accountBalance) / Number(p.sessionPrice))
-    : (p.remainingSessions ?? null);
-  const hasBalance = Number(p.accountBalance) > 0;
+    ? Math.max(0, Math.floor(Number(p.accountBalance) / Number(p.sessionPrice)))
+    : Math.max(0, p.remainingSessions ?? 0);
+  const rawBalance = Number(p.accountBalance);
+  const hasBalance = rawBalance > 0;
+  const isNegativeBalance = rawBalance < 0;
 
   if (isAdmin) {
+    const boxBg = hasBalance ? 'rgba(16,185,129,0.07)' : isNegativeBalance ? 'rgba(239,68,68,0.07)' : 'action.hover';
+    const boxBorder = hasBalance ? '1px solid rgba(16,185,129,0.2)' : isNegativeBalance ? '1px solid rgba(239,68,68,0.2)' : '1px solid transparent';
+    const balanceColor = hasBalance ? 'success.dark' : isNegativeBalance ? 'error.dark' : 'text.secondary';
+    const sessionsColor = hasBalance ? 'success.main' : 'text.disabled';
     return (
-      <Box sx={{
-        borderRadius: 1,
-        px: 1,
-        py: 0.875,
-        mb: 1.25,
-        textAlign: 'center',
-        bgcolor: hasBalance ? 'rgba(16,185,129,0.07)' : 'action.hover',
-        border: hasBalance ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-      }}>
+      <Box sx={{ borderRadius: 1, px: 1, py: 0.875, mb: 1.25, textAlign: 'center', bgcolor: boxBg, border: boxBorder }}>
         <Typography sx={{ fontSize: '0.63rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, display: 'block', mb: 0.2 }}>
           Stanje računa
         </Typography>
-        <Typography sx={{
-          fontSize: '0.92rem',
-          fontWeight: 800,
-          color: hasBalance ? 'success.dark' : 'text.secondary',
-          lineHeight: 1.2,
-        }}>
+        <Typography sx={{ fontSize: '0.92rem', fontWeight: 800, color: balanceColor, lineHeight: 1.2 }}>
           {formatCurrency(p.accountBalance, 0)}
         </Typography>
-        {remainingSessions !== null && (
-          <Typography sx={{
-            fontSize: '0.7rem',
-            fontWeight: 500,
-            color: hasBalance ? 'success.main' : 'text.disabled',
-            mt: 0.15,
-          }}>
-            ({remainingSessions} tretmana)
-          </Typography>
-        )}
+        <Typography sx={{ fontSize: '0.7rem', fontWeight: 500, color: sessionsColor, mt: 0.15 }}>
+          ({remainingSessions} tretmana)
+        </Typography>
       </Box>
     );
   }

@@ -191,7 +191,7 @@ export default function PatientDetailPage() {
                   <Typography
                     variant="h4"
                     fontWeight={700}
-                    color={patient.accountBalance > 0 ? 'success.main' : 'text.primary'}
+                    color={patient.accountBalance > 0 ? 'success.main' : patient.accountBalance < 0 ? 'error.main' : 'text.primary'}
                     sx={{ lineHeight: 1.1, mb: 1.5 }}
                   >
                     {formatCurrency(patient.accountBalance)}
@@ -222,7 +222,7 @@ export default function PatientDetailPage() {
                     color={patient.remainingSessions > 0 ? 'primary.main' : 'error.main'}
                     sx={{ lineHeight: 1.1 }}
                   >
-                    {patient.remainingSessions}
+                    {Math.max(0, patient.remainingSessions)}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                     Na osnovu stanja

@@ -131,10 +131,11 @@ model Session {
   duration      Int           // minutes
   status        SessionStatus @default(SCHEDULED)
   treatmentType String?
-  isPaid        Boolean       @default(false)
-  report        String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  isPaid          Boolean       @default(false)
+  balanceDeducted Boolean       @default(false)
+  report          String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   finance Finance?
 

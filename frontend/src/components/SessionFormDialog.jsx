@@ -103,6 +103,9 @@ export default function SessionFormDialog({ open, onClose, session, defaultSlot 
       qc.invalidateQueries({ queryKey: ['sessions'] });
       qc.invalidateQueries({ queryKey: ['calendar'] });
       qc.invalidateQueries({ queryKey: ['treatment-types'] });
+      qc.invalidateQueries({ queryKey: ['patients'] });
+      qc.invalidateQueries({ queryKey: ['patient'] });
+      qc.invalidateQueries({ queryKey: ['finance'] });
       toast.success(session ? 'Tretman ažuriran' : 'Tretman kreiran');
       onClose();
     },
