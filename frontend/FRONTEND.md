@@ -67,12 +67,30 @@ Mounted once in `App.jsx` via `useSocket()`. On each `*:updated` event it invali
 Route-to-role mapping:
 - `/therapists`, `/rooms` — ADMIN only
 - `/transactions` — ADMIN only
-- `/finance` — ADMIN, THERAPIST (CHIEF_THERAPIST missing — intended, finance shows own earnings)
+- `/finance` — ADMIN, THERAPIST only (CHIEF_THERAPIST intentionally excluded at route level; backend also filters by role)
 - All other routes — any authenticated user
 
 ## Dashboard branching
 
 `DashboardPage` checks `user.role === 'PATIENT'` and renders `PatientDashboard` (own profile, sessions, transactions, military requests) instead of the admin/therapist stats dashboard. Both live in the same `Dashboard.jsx` file.
+
+## Pages
+
+| Page | Notes |
+|------|-------|
+| `Login.jsx` | Two-panel layout (hero image + form) |
+| `Dashboard.jsx` | Branches: `PatientDashboard` (role=PATIENT) vs admin/therapist stats |
+| `Patients.jsx` | Paginated list with search/filter; create/edit/delete via dialogs |
+| `PatientDetail.jsx` | Tabbed view: profile info, sessions, transactions, evaluations, military requests |
+| `Therapists.jsx` | Paginated list; create/edit/delete via dialogs |
+| `Rooms.jsx` | CRUD |
+| `Calendar.jsx` | Session calendar; create/edit/delete |
+| `Finance.jsx` | Sessions with finance records; therapist sees own only |
+| `Transactions.jsx` | Add payment/refund; paginated list (ADMIN only) |
+
+## Layout
+
+`src/components/Layout.jsx` — sidebar + top nav shell used by all authenticated pages. Renders nav items conditionally by role. Mobile-responsive (drawer on small screens).
 
 ## Military request status (client-side)
 

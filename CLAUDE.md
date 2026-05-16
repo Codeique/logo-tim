@@ -62,7 +62,7 @@ cp .env.example backend/.env
 ### Backend structure
 Express app entry is `backend/src/index.ts`. Middleware order: `helmet → compression → cors → cookieParser → express.json → requestId → HTTP logger/Prometheus → rate limiters → routes → health/ready/metrics → errorHandler`.
 
-Each module under `src/modules/<name>/` follows: `routes → controller → (service) → (validation)`. See [`backend/BACKEND.md`](backend/BACKEND.md) for the full module reference, testing setup, and caching details.
+Each module under `src/modules/<name>/` follows: `routes → controller → (service) → (validation)`. Modules: `auth`, `patients`, `therapists`, `rooms`, `sessions`, `transactions`, `evaluations`, `militaryRequests`, `finance`, `travelOrders`, `auditLogs`, `users`. See [`backend/BACKEND.md`](backend/BACKEND.md) for the full module reference, testing setup, and caching details.
 
 ### Frontend structure
 React Router v6 with nested routes. `ProtectedRoute` checks `accessToken` + optional `roles` prop. Socket.io is a singleton connected once in `App.jsx` via `useSocket()`.
@@ -80,6 +80,8 @@ See [`frontend/FRONTEND.md`](frontend/FRONTEND.md) for state management, React Q
 - `ADMIN` — full access to everything
 - `THERAPIST` / `CHIEF_THERAPIST` — see all patients; calendar shows sessions in their assigned rooms; finance shows own earnings only; no access to Transactions page
 - `PATIENT` — dashboard shows own profile only (`PatientDashboard` in `Dashboard.jsx`); no other pages
+
+Note: `/finance` route intentionally excludes `CHIEF_THERAPIST` from the frontend `ProtectedRoute` — therapists see only their own earnings via backend role filter.
 
 ## Key Conventions
 

@@ -15,10 +15,10 @@ A production-ready fullstack system for managing a speech therapy / therapy cent
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite + Material UI
-- **Backend**: Node.js + Express.js
+- **Frontend**: React 18 + Vite + Material UI v5
+- **Backend**: Node.js + Express.js + TypeScript
 - **Database**: PostgreSQL + Prisma ORM
-- **Auth**: JWT + Refresh Tokens
+- **Auth**: JWT (15 min access) + Refresh Tokens (7 day HttpOnly cookie)
 - **Real-time**: Socket.io
 - **PDF**: PDFKit
 
@@ -113,50 +113,104 @@ Seeds:
 
 ## API Endpoints
 
+### Auth
 | Method | Path                      | Description                     |
 |--------|---------------------------|---------------------------------|
 | POST   | /api/auth/login           | Login                           |
-| POST   | /api/auth/refresh         | Refresh token                   |
-| POST   | /api/auth/logout          | Logout                          |
+| POST   | /api/auth/refresh         | Refresh access token            |
+| POST   | /api/auth/logout          | Logout (clears cookie)          |
 | GET    | /api/auth/me              | Current user                    |
-| GET    | /api/patients             | List patients (paginated)       |
-| POST   | /api/patients             | Create patient                  |
-| GET    | /api/patients/me          | Own patient profile (PATIENT)   |
-| GET    | /api/patients/:id         | Patient detail with relations   |
-| PUT    | /api/patients/:id         | Update patient                  |
+
+### Patients
+| Method | Path                         | Description                          |
+|--------|------------------------------|--------------------------------------|
+| GET    | /api/patients                | List patients (paginated, searchable)|
+| POST   | /api/patients                | Create patient                       |
+| GET    | /api/patients/me             | Own patient profile (PATIENT role)   |
+| GET    | /api/patients/:id            | Patient detail with relations        |
+| PUT    | /api/patients/:id            | Update patient (writes audit log)    |
+| DELETE | /api/patients/:id            | Delete patient                       |
+| PATCH  | /api/patients/:id/toggle-active | Toggle patient active status      |
+
+### Therapists
+| Method | Path                      | Description                     |
+|--------|---------------------------|---------------------------------|
 | GET    | /api/therapists           | List therapists                 |
 | POST   | /api/therapists           | Create therapist                |
+| GET    | /api/therapists/:id       | Therapist detail                |
+| PUT    | /api/therapists/:id       | Update therapist                |
+| DELETE | /api/therapists/:id       | Delete therapist                |
+
+### Rooms
+| Method | Path                      | Description                     |
+|--------|---------------------------|---------------------------------|
 | GET    | /api/rooms                | List rooms                      |
 | POST   | /api/rooms                | Create room                     |
-| GET    | /api/sessions             | List sessions (filtered)        |
-| POST   | /api/sessions             | Create session (conflict check) |
-| PUT    | /api/sessions/:id         | Update session                  |
+| GET    | /api/rooms/:id            | Room detail                     |
+| PUT    | /api/rooms/:id            | Update room                     |
+| DELETE | /api/rooms/:id            | Delete room                     |
+
+### Sessions
+| Method | Path                      | Description                          |
+|--------|---------------------------|--------------------------------------|
+| GET    | /api/sessions             | List sessions (filtered by date/role)|
+| POST   | /api/sessions             | Create session (conflict check)      |
+| GET    | /api/sessions/:id         | Session detail                       |
+| PUT    | /api/sessions/:id         | Update session                       |
+| DELETE | /api/sessions/:id         | Delete session                       |
+
+### Transactions
+| Method | Path                      | Description                     |
+|--------|---------------------------|---------------------------------|
 | GET    | /api/transactions         | List transactions               |
-| POST   | /api/transactions         | Add payment/refund              |
+| POST   | /api/transactions         | Add payment / refund            |
+
+### Evaluations
+| Method | Path                      | Description                     |
+|--------|---------------------------|---------------------------------|
 | GET    | /api/evaluations          | List evaluations                |
 | POST   | /api/evaluations          | Add evaluation                  |
-| GET    | /api/military-requests    | List military requests          |
-| POST   | /api/military-requests    | Create military request         |
-| GET    | /api/finance              | Finance records                 |
-| GET    | /api/travel-orders/generate | Generate travel order PDF    |
-| GET    | /api/audit-logs           | Audit log (admin only)          |
+| PUT    | /api/evaluations/:id      | Update evaluation               |
+| DELETE | /api/evaluations/:id      | Delete evaluation               |
+
+### Military Requests
+| Method | Path                         | Description                     |
+|--------|------------------------------|---------------------------------|
+| GET    | /api/military-requests       | List military requests          |
+| POST   | /api/military-requests       | Create military request         |
+| PUT    | /api/military-requests/:id   | Update military request         |
+| DELETE | /api/military-requests/:id   | Delete military request         |
+
+### Finance & Other
+| Method | Path                        | Description                     |
+|--------|-----------------------------|---------------------------------|
+| GET    | /api/finance                | Finance records (role-filtered) |
+| GET    | /api/travel-orders/generate | Generate travel order PDF       |
+| GET    | /api/audit-logs             | Audit log (admin only)          |
+
+### Health
+| Method | Path      | Description                          |
+|--------|-----------|--------------------------------------|
+| GET    | /health   | Liveness (no DB check)               |
+| GET    | /ready    | Readiness (DB ping, 503 on failure)  |
+| GET    | /metrics  | Prometheus metrics                   |
 
 ---
 
 ## Roles & Permissions
 
-| Feature              | Admin | Therapist               | Patient      |
-|----------------------|-------|-------------------------|--------------|
-| All patients         | ✓     | ✓ (all)                 | Self only    |
-| All therapists       | ✓     | —                       | —            |
-| Rooms management     | ✓     | —                       | —            |
-| Calendar             | ✓     | Room sessions (own rooms)| —           |
-| Sessions             | ✓     | Own + room occupancy    | Own          |
-| Transactions page    | ✓     | —                       | —            |
-| Finance              | ✓     | Own earnings only       | —            |
-| Military requests    | ✓     | ✓                       | View         |
-| Audit logs           | ✓     | —                       | —            |
-| Dashboard            | ✓     | ✓                       | Profile only |
+| Feature              | Admin | Therapist / Chief Therapist | Patient      |
+|----------------------|-------|-----------------------------|--------------|
+| All patients         | ✓     | ✓ (all)                     | Self only    |
+| All therapists       | ✓     | —                           | —            |
+| Rooms management     | ✓     | —                           | —            |
+| Calendar             | ✓     | Room sessions (own rooms)   | —            |
+| Sessions             | ✓     | Own + room occupancy        | Own          |
+| Transactions page    | ✓     | —                           | —            |
+| Finance              | ✓     | Own earnings only           | —            |
+| Military requests    | ✓     | ✓                           | View         |
+| Audit logs           | ✓     | —                           | —            |
+| Dashboard            | ✓     | ✓                           | Profile only |
 
 ---
 

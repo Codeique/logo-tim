@@ -42,6 +42,8 @@ Each module under `src/modules/<name>/` follows:
 <name>.service.ts     — only when logic is complex (multi-step writes, conflict checks)
 ```
 
+Modules: `auth`, `patients`, `therapists`, `rooms`, `sessions`, `transactions`, `evaluations`, `militaryRequests`, `finance`, `travelOrders`, `auditLogs`, `users`.
+
 Always call `next(err)` in controllers — never call `res.status(500).json(...)` directly. The errorHandler maps Prisma codes automatically: P2002 → 409, P2025 → 404, P2003 → 409.
 
 ## Auth
@@ -57,6 +59,10 @@ Always call `next(err)` in controllers — never call `res.status(500).json(...)
 - Multi-step writes → `prisma.$transaction(async (tx) => { ... })` inside service files.
 - `MilitaryRequest.status` is a **virtual computed field** via Prisma result extension in `src/lib/prisma.ts` — never stored in DB, never queried from DB column. Computed from `validFrom`/`validUntil`.
 - `src/lib/prisma.ts` also logs slow queries (>500ms as `warn`, otherwise `debug`).
+
+## Logger
+
+`src/lib/logger.ts` — Winston logger instance. JSON format in production, colorized in development. Import and use this instead of `console.log` in all backend code.
 
 ## Caching
 
@@ -80,10 +86,11 @@ Most routes use the `auditLog(entity, action)` middleware (monkey-patches `res.j
 
 ## Session completion
 
-Completing a session is atomic via `completeSession(sessionId)` in `sessions.service.ts`:
+Completing a session is atomic via `completeSession(sessionId, isPaid)` in `sessions.service.ts`:
 1. Update session status to `COMPLETED`
-2. Upsert `Finance` record (`therapistEarning = hourlyRate × durationHours`, `companyIncome = sessionPrice − therapistEarning`)
-3. Decrement `remainingSessions` for civilian patients (clamped at 0); increment `usedSessions` on the active `MilitaryRequest` for military patients
+2. Upsert `Finance` record (`therapistEarning = hourlyRate × durationHours`, `companyIncome = max(sessionPrice − therapistEarning, 0)`)
+3. For civilian patients where `isPaid = true`: call `adjustPatientBalance(tx, patientId, -sessionPrice)` which decrements `accountBalance` and recalculates `remainingSessions` (clamped at 0)
+4. For military patients: increment `usedSessions` on the active `MilitaryRequest`
 
 Guard against double-completion: the service throws 409 if `status === 'COMPLETED'` already.
 
