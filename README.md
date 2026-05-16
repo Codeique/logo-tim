@@ -15,7 +15,7 @@ A production-ready fullstack system for managing a speech therapy / therapy cent
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite + Material UI v5
+- **Frontend**: React 18 + Vite 8 + Material UI v5
 - **Backend**: Node.js 22 + Express 5 + TypeScript
 - **Database**: PostgreSQL + Prisma ORM
 - **Auth**: JWT (15 min access) + Refresh Tokens (7 day HttpOnly cookie)
@@ -235,7 +235,7 @@ Frontend subscribes via `useSocket` hook and invalidates React Query caches auto
 ### VPS / Cloud VM
 
 ```bash
-# 1. Install Node.js 20+, PostgreSQL, and optionally Docker
+# 1. Install Node.js 22+, PostgreSQL, and optionally Docker
 
 # 2. Clone repo
 git clone <repo> /opt/logotim && cd /opt/logotim

@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LogoTim is a therapy center management system (speech therapy / terapeutics). Fullstack monorepo: React 18 + Vite frontend, Node.js/Express backend, PostgreSQL via Prisma ORM, Socket.io for real-time updates.
+LogoTim is a therapy center management system (speech therapy / terapeutics). Fullstack monorepo: React 18 + Vite 8 frontend, Node.js 22 + Express 5 backend (TypeScript), PostgreSQL via Prisma ORM, Socket.io for real-time updates.
 
 ## Development Commands
 
@@ -95,6 +95,8 @@ Note: `/finance` route intentionally excludes `CHIEF_THERAPIST` from the fronten
 - `db push` for dev/Docker; `prisma migrate dev` when migration history matters — enum changes require a migration before production deploy
 - `/patients/me` must be registered before `/:id` in routes to prevent Express treating `"me"` as a numeric ID param
 - `PUT /patients/:id` writes the audit log manually (to capture `oldValue`); do NOT also attach the `auditLog` middleware to that route
+- **Express 5**: Controllers with `/:id` routes must type the request as `Request<{ id: string }>` — Express 5 tightened `req.params` from `any` to `string | string[]`
+- **ESLint v10**: Uses flat config (`eslint.config.js`) — `@typescript-eslint/no-empty-object-type` is disabled because `Request<{}, {}, Body>` is idiomatic Express; `@typescript-eslint/no-require-imports` is off for config files
 
 ### Frontend
 - All reads use React Query; mutations use `api` (axios) directly and rely on Socket.io events for cache invalidation

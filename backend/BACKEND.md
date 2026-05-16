@@ -9,7 +9,7 @@ npm run dev            # tsx watch (hot reload)
 npm run build          # tsc → dist/
 npm start              # node dist/index.js
 
-npm run lint           # eslint src --ext .ts
+npm run lint           # eslint src (ESLint v10 flat config — no --ext flag)
 npm run lint:fix
 
 npm test               # jest --runInBand (all tests)
@@ -45,6 +45,26 @@ Each module under `src/modules/<name>/` follows:
 Modules: `auth`, `patients`, `therapists`, `rooms`, `sessions`, `transactions`, `evaluations`, `militaryRequests`, `finance`, `travelOrders`, `auditLogs`, `users`.
 
 Always call `next(err)` in controllers — never call `res.status(500).json(...)` directly. The errorHandler maps Prisma codes automatically: P2002 → 409, P2025 → 404, P2003 → 409.
+
+## ESLint
+
+ESLint v10 uses **flat config** — `eslint.config.js` at the repo root (`.eslintrc.js` is not supported). The config uses `@typescript-eslint/eslint-plugin` v8's `flat/recommended` export. Key rule overrides:
+- `no-empty-object-type: off` — Express `Request<{}, {}, Body>` pattern requires empty-object type positions
+- `no-require-imports: off` — config files use `require()`
+- `no-explicit-any: error`, `no-unused-vars: error` (args prefixed with `_` are exempt)
+
+## Express 5 typed params
+
+Controllers that handle `/:id` routes must declare the request type explicitly:
+```ts
+import { Request, Response, NextFunction } from 'express';
+
+export const getById = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  // ...
+};
+```
+Express 5 tightened `req.params` types from `any` to `ParamsDictionary` — without the generic, accessing `req.params.id` is a TypeScript error.
 
 ## Auth
 
@@ -127,6 +147,17 @@ Tests live in `tests/` with three sub-patterns:
 
 **Prisma mock** — `tests/__mocks__/prisma.ts` uses `jest-mock-extended` (`mockDeep<PrismaClient>()`). Jest's `moduleNameMapper` in `package.json` redirects all `lib/prisma` imports to this mock automatically.
 
+**`$transaction` mock** — Service functions that call `prisma.$transaction(async (tx) => {...})` require the mock to pass-through the callback. Add this to `beforeEach` in any service test that exercises transactional code:
+```ts
+(prismaMock.$transaction as jest.Mock).mockImplementation(
+  async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock)
+);
+```
+
+**Decimal fields in factories** — `makePatient()` and similar factories must include `accountBalance` and `sessionPrice` as Decimal-like objects (via the `decimal()` helper in `tests/__helpers__/factories.ts`) so `.toNumber()` works without throwing.
+
 **Test app** — `tests/__helpers__/app.ts` exports `buildTestApp()` — a minimal Express instance with all routes and errorHandler, used in integration tests with supertest. Auth is injected manually by each test (set `req.user` via a stub middleware).
 
 **Setup file** — `tests/jest.setup.ts` sets required env vars (`JWT_SECRET`, etc.) before any module loads. Tests run with `--runInBand` to avoid port/mock conflicts.
+
+**Peer deps** — `backend/.npmrc` sets `legacy-peer-deps=true` to resolve the TypeScript 6 peer conflict with `jest-mock-extended@4` (which declares `peerDependencies: typescript ^3||^4||^5`).

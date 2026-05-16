@@ -1,6 +1,6 @@
 # FRONTEND.md
 
-React 18 + Vite frontend for LogoTim. MUI v5, React Query v5, Zustand, Socket.io, Vitest.
+React 18 + Vite 8 frontend for LogoTim. MUI v5, React Query v5, Zustand, Socket.io, Vitest.
 
 ## Commands
 
@@ -133,6 +133,7 @@ Tests live in `tests/` and run with **Vitest** + `jsdom` environment.
 
 - `tests/setup.js` is the setup file (configured in `vite.config.js`).
 - Uses `@testing-library/react` for component/hook tests.
+- `@testing-library/dom` must be an explicit devDependency (required peer after Vite 8 upgrade).
 - Test utilities and mocks live alongside the test files.
 
 Run a specific test:
