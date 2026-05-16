@@ -16,7 +16,7 @@ A production-ready fullstack system for managing a speech therapy / therapy cent
 ## Tech Stack
 
 - **Frontend**: React 18 + Vite + Material UI v5
-- **Backend**: Node.js + Express.js + TypeScript
+- **Backend**: Node.js 22 + Express 5 + TypeScript
 - **Database**: PostgreSQL + Prisma ORM
 - **Auth**: JWT (15 min access) + Refresh Tokens (7 day HttpOnly cookie)
 - **Real-time**: Socket.io
@@ -25,7 +25,7 @@ A production-ready fullstack system for managing a speech therapy / therapy cent
 ## Quick Start (Development)
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 22+
 - PostgreSQL 14+ running locally
 
 ### 1. Clone & Setup

@@ -86,7 +86,7 @@ export const update = async (req: Request<{ id: string }, {}, MilitaryRequestUpd
   } catch (err) { next(err); }
 };
 
-export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const remove = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     await prisma.militaryRequest.delete({ where: { id: parseInt(req.params.id) } });
     emitEvent('militaryRequests:updated', { action: 'deleted', id: parseInt(req.params.id) });

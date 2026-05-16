@@ -5,7 +5,7 @@ import env from '../../config/env';
 
 export function generateTokens(userId: number, role: Role): { accessToken: string; refreshToken: string } {
   const accessToken = jwt.sign({ userId, role }, env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '1d' });
+  const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
   return { accessToken, refreshToken };
 }
 

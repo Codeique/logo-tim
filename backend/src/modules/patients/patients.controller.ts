@@ -97,7 +97,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
   } catch (err) { next(err); }
 };
 
-export const getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getById = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const patient = await prisma.patient.findFirst({
       where: { id: parseInt(req.params.id), deletedAt: null },
@@ -201,7 +201,7 @@ export const update = async (req: Request<{ id: string }, {}, PatientUpdateBody>
   } catch (err) { next(err); }
 };
 
-export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const remove = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const now = new Date();
@@ -219,7 +219,7 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
   } catch (err) { next(err); }
 };
 
-export const toggleActive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const toggleActive = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const patient = await prisma.patient.findFirstOrThrow({ where: { id: parseInt(id), deletedAt: null }, select: { isActive: true } });

@@ -47,7 +47,7 @@ export const list = async (req: Request, res: Response, next: NextFunction): Pro
   } catch (err) { next(err); }
 };
 
-export const getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getById = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const therapist = await prisma.therapist.findFirst({
       where: { id: parseInt(req.params.id), deletedAt: null },
@@ -113,7 +113,7 @@ export const update = async (req: Request<{ id: string }, {}, TherapistUpdateBod
   } catch (err) { next(err); }
 };
 
-export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const remove = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const therapistId = parseInt(req.params.id);
     const now = new Date();

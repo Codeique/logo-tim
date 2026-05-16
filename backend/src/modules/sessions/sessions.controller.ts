@@ -103,7 +103,7 @@ export const list = async (req: Request<{}, {}, {}, SessionListQuery>, res: Resp
   } catch (err) { next(err); }
 };
 
-export const getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getById = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const session = await prisma.session.findUnique({
       where: { id: parseInt(req.params.id) },
@@ -323,7 +323,7 @@ export const update = async (req: Request<{ id: string }, {}, SessionUpdateBody>
   } catch (err) { next(err); }
 };
 
-export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const remove = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const sessionId = parseInt(req.params.id);
 
