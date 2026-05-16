@@ -10,7 +10,9 @@ export interface ApplyPaymentArgs {
 }
 
 /**
- * Atomically create a transaction record and update patient balance/sessions.
+ * Atomically create a transaction record and update patient balance/remainingSessions.
+ * remainingSessions is always recalculated from the new balance:
+ *   remainingSessions = max(0, floor(newBalance / sessionPrice))
  * Implements BUG-02 fix: both writes are inside a single Prisma $transaction.
  */
 export async function applyPayment(
@@ -36,20 +38,18 @@ export async function applyPayment(
 
     const patientRecord = await tx.patient.findUniqueOrThrow({
       where: { id: parsedPatientId },
-      select: { sessionPrice: true },
+      select: { sessionPrice: true, accountBalance: true },
     });
 
-    const sessionPriceVal = patientRecord.sessionPrice.toNumber() || 1;
     const resolvedType = type ?? TransactionType.PAYMENT;
     const delta = resolvedType === TransactionType.REFUND ? -parsedAmount : parsedAmount;
-    const sessionsDelta = resolvedType === TransactionType.PAYMENT ? Math.floor(parsedAmount / sessionPriceVal) : 0;
+    const newBalance = patientRecord.accountBalance.toNumber() + delta;
+    const sessionPrice = patientRecord.sessionPrice.toNumber();
+    const remainingSessions = sessionPrice > 0 ? Math.max(0, Math.floor(newBalance / sessionPrice)) : 0;
 
     const updatedPatient = await tx.patient.update({
       where: { id: parsedPatientId },
-      data: {
-        accountBalance: { increment: delta },
-        ...(sessionsDelta > 0 ? { remainingSessions: { increment: sessionsDelta } } : {}),
-      },
+      data: { accountBalance: newBalance, remainingSessions },
     });
 
     return { transaction, updatedPatient };

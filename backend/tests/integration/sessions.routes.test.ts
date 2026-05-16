@@ -118,7 +118,8 @@ describe('PUT /api/sessions/:id — complete session (DI-04)', () => {
       .send({ status: 'COMPLETED' });
 
     expect(res.status).toBe(200);
-    expect(completeSession).toHaveBeenCalledWith(1);
+    // controller passes isPaid=false (the session's existing value) as second arg
+    expect(completeSession).toHaveBeenCalledWith(1, false);
   });
 
   it('skips re-completion when session is already COMPLETED', async () => {
@@ -140,13 +141,22 @@ describe('PUT /api/sessions/:id — complete session (DI-04)', () => {
 describe('DELETE /api/sessions/:id', () => {
   it('cancels the session (sets status to CANCELED)', async () => {
     asAdmin();
+    // remove() runs inside $transaction — pass through so the callback executes
+    (prismaMock.$transaction as jest.Mock).mockImplementation(
+      async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
+    );
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(
+      makeSession({ status: SessionStatus.SCHEDULED, balanceDeducted: false }) as any,
+    );
     prismaMock.session.update.mockResolvedValue(makeSession({ status: SessionStatus.CANCELED }) as any);
 
     const res = await request(app).delete('/api/sessions/1');
 
     expect(res.status).toBe(200);
     expect(prismaMock.session.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: SessionStatus.CANCELED } }),
+      expect.objectContaining({
+        data: { status: SessionStatus.CANCELED, balanceDeducted: false },
+      }),
     );
   });
 });

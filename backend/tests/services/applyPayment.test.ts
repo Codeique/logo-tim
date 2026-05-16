@@ -4,17 +4,18 @@ import { TransactionType } from '@prisma/client';
 import { makePatient, makeTransaction, decimal } from '../__helpers__/factories';
 
 beforeEach(() => {
-  // Make $transaction forward the callback to the mock itself (cast avoids overload ambiguity)
   (prismaMock.$transaction as jest.Mock).mockImplementation(async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock));
 });
 
-describe('applyPayment — PAYMENT', () => {
-  const patientWithPrice = { sessionPrice: decimal(80) };
+// Service reads both sessionPrice AND accountBalance from the patient record.
+// Mocks must include accountBalance as a Decimal so .toNumber() works.
+const patientBase = makePatient({ sessionPrice: decimal(80), accountBalance: decimal(0) });
 
+describe('applyPayment — PAYMENT', () => {
   it('creates a transaction record with the correct type and amount', async () => {
     const tx = makeTransaction({ type: TransactionType.PAYMENT, amount: decimal(160) });
     prismaMock.transaction.create.mockResolvedValue(tx as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientWithPrice as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient({ remainingSessions: 2 }) as any);
 
     await applyPayment({ patientId: 1, amount: 160, type: TransactionType.PAYMENT, createdById: 1 });
@@ -24,38 +25,39 @@ describe('applyPayment — PAYMENT', () => {
     );
   });
 
-  it('increments remainingSessions by floor(amount / sessionPrice)', async () => {
+  it('sets remainingSessions to floor(newBalance / sessionPrice) after payment', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction() as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientWithPrice as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 160, type: TransactionType.PAYMENT, createdById: 1 });
 
-    // 160 / 80 = 2 sessions
+    // balance=0 + 160 = 160; floor(160/80) = 2
     expect(prismaMock.patient.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ remainingSessions: { increment: 2 } }),
+        data: expect.objectContaining({ remainingSessions: 2 }),
       }),
     );
   });
 
-  it('increments accountBalance by the payment amount', async () => {
+  it('sets accountBalance to newBalance after payment', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction() as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientWithPrice as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 160, type: TransactionType.PAYMENT, createdById: 1 });
 
+    // balance=0 + 160 = 160
     expect(prismaMock.patient.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ accountBalance: { increment: 160 } }),
+        data: expect.objectContaining({ accountBalance: 160 }),
       }),
     );
   });
 
   it('defaults type to PAYMENT when not provided', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction() as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientWithPrice as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 80, createdById: 1 });
@@ -67,43 +69,46 @@ describe('applyPayment — PAYMENT', () => {
 });
 
 describe('applyPayment — REFUND', () => {
-  it('decrements accountBalance by the refund amount', async () => {
+  it('sets accountBalance to newBalance after refund (balance decreases)', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction({ type: TransactionType.REFUND }) as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ sessionPrice: decimal(80) } as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 80, type: TransactionType.REFUND, createdById: 1 });
 
+    // balance=0 + (-80) = -80
     expect(prismaMock.patient.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ accountBalance: { increment: -80 } }),
+        data: expect.objectContaining({ accountBalance: -80 }),
       }),
     );
   });
 
-  it('does NOT increment remainingSessions for a REFUND', async () => {
+  it('clamps remainingSessions to 0 when balance goes negative after refund', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction({ type: TransactionType.REFUND }) as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ sessionPrice: decimal(80) } as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 80, type: TransactionType.REFUND, createdById: 1 });
 
+    // floor(-80/80) = -1, clamped to 0
     const updateCall = prismaMock.patient.update.mock.calls[0][0];
-    expect(updateCall.data.remainingSessions).toBeUndefined();
+    expect(updateCall.data.remainingSessions).toBe(0);
   });
 });
 
 describe('applyPayment — ADJUSTMENT', () => {
-  it('increments accountBalance but does NOT change sessions', async () => {
+  it('sets accountBalance to newBalance and recalculates remainingSessions', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction({ type: TransactionType.ADJUSTMENT }) as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ sessionPrice: decimal(80) } as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 50, type: TransactionType.ADJUSTMENT, createdById: 1 });
 
+    // balance=0 + 50 = 50; floor(50/80) = 0
     const updateCall = prismaMock.patient.update.mock.calls[0][0];
-    expect(updateCall.data.accountBalance).toEqual({ increment: 50 });
-    expect(updateCall.data.remainingSessions).toBeUndefined();
+    expect(updateCall.data.accountBalance).toBe(50);
+    expect(updateCall.data.remainingSessions).toBe(0);
   });
 });
 
@@ -112,7 +117,7 @@ describe('applyPayment — atomicity', () => {
     const tx = makeTransaction();
     const patient = makePatient({ remainingSessions: 1 });
     prismaMock.transaction.create.mockResolvedValue(tx as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ sessionPrice: decimal(80) } as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(patient as any);
 
     const result = await applyPayment({ patientId: 1, amount: 80, createdById: 1 });
@@ -123,7 +128,7 @@ describe('applyPayment — atomicity', () => {
 
   it('runs both writes inside prisma.$transaction', async () => {
     prismaMock.transaction.create.mockResolvedValue(makeTransaction() as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue({ sessionPrice: decimal(80) } as any);
+    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientBase as any);
     prismaMock.patient.update.mockResolvedValue(makePatient() as any);
 
     await applyPayment({ patientId: 1, amount: 80, createdById: 1 });

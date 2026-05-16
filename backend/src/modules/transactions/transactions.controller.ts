@@ -50,7 +50,7 @@ export const list = async (req: Request<{}, {}, {}, TransactionListQuery>, res: 
     // SEC-06: scope THERAPIST/CHIEF_THERAPIST to their own patients' transactions
     if (isTherapistRole(req.user.role)) {
       const tId = await getTherapistId(req.user.id);
-      if (tId) where.patient = { therapistId: tId };
+      if (tId) where.patient = { primaryTherapistId: tId };
     }
     if (req.user.role === Role.PATIENT) {
       const pId = await getPatientId(req.user.id);

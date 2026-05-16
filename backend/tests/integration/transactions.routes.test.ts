@@ -58,9 +58,9 @@ describe('GET /api/transactions', () => {
 
     await request(app).get('/api/transactions');
 
-    // The where clause should include patient.therapistId filter
+    // The where clause should include patient.primaryTherapistId filter
     const findManyCall = prismaMock.transaction.findMany.mock.calls[0]?.[0];
-    expect(findManyCall?.where?.patient).toEqual({ therapistId: 1 });
+    expect(findManyCall?.where?.patient).toEqual({ primaryTherapistId: 1 });
   });
 });
 

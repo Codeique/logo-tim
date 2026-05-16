@@ -10,6 +10,7 @@ interface ChangePasswordBody {
 export const list = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const users = await prisma.user.findMany({
+      where: { deletedAt: null },
       select: { id: true, email: true, role: true, createdAt: true },
     });
     res.json(users);

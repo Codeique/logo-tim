@@ -188,8 +188,8 @@ function PatientDashboard() {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <InfoRow label="Logoped" value={patient.therapist ? `${patient.therapist.firstName} ${patient.therapist.lastName}` : null} />
-                <InfoRow label="Cena tretmana" value={formatCurrency(patient.sessionPrice)} />
+                <InfoRow label="Terapeut" value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : null} />
+                {!patient.isMilitary && <InfoRow label="Cena tretmana" value={formatCurrency(patient.sessionPrice)} />}
               </Box>
             </CardContent>
           </Card>
@@ -219,7 +219,7 @@ function PatientDashboard() {
         <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2 }}>
           <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
             <Tab label={`Tretmani (${patient.sessions?.length || 0})`} />
-            <Tab label={`Transakcije (${patient.transactions?.length || 0})`} />
+            {!patient.isMilitary && <Tab label={`Transakcije (${patient.transactions?.length || 0})`} />}
             {patient.isMilitary && <Tab label={`Vojni zahtevi (${patient.militaryRequests?.length || 0})`} />}
           </Tabs>
         </Box>
@@ -236,11 +236,11 @@ function PatientDashboard() {
                     <TableRow>
                       <TableCell>Datum</TableCell>
                       <TableCell>Vreme</TableCell>
-                      <TableCell>Logoped</TableCell>
+                      <TableCell>Terapeut</TableCell>
                       <TableCell>Prostorija</TableCell>
                       <TableCell>Trajanje</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell>Plaćeno</TableCell>
+                      {!patient.isMilitary && <TableCell>Plaćeno</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -259,9 +259,11 @@ function PatientDashboard() {
                             variant="outlined"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Chip label={s.isPaid ? 'Da' : 'Ne'} size="small" color={s.isPaid ? 'success' : 'default'} variant="outlined" />
-                        </TableCell>
+                        {!patient.isMilitary && (
+                          <TableCell>
+                            <Chip label={s.isPaid ? 'Da' : 'Ne'} size="small" color={s.isPaid ? 'success' : 'default'} variant="outlined" />
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -271,51 +273,53 @@ function PatientDashboard() {
           </TabPanel>
 
           {/* Transactions */}
-          <TabPanel value={tab} index={1}>
-            {patient.transactions?.length === 0 ? (
-              <Box sx={{ py: 4, textAlign: 'center' }}><Typography color="text.secondary">Nema transakcija</Typography></Box>
-            ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Datum</TableCell>
-                      <TableCell align="right">Iznos</TableCell>
-                      <TableCell>Tip</TableCell>
-                      <TableCell>Napomena</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {patient.transactions?.map(t => (
-                      <TableRow key={t.id} hover>
-                        <TableCell>{format(new Date(t.createdAt), 'dd.MM.yyyy HH:mm')}</TableCell>
-                        <TableCell align="right">
-                          <Typography fontWeight={600} sx={{ color: t.type === 'REFUND' ? 'error.main' : 'success.main' }}>
-                            {t.type === 'REFUND' ? '-' : '+'}{formatCurrency(t.amount)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).label}
-                            size="small"
-                            color={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).color}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary">{t.note || '—'}</Typography>
-                        </TableCell>
+          {!patient.isMilitary && (
+            <TabPanel value={tab} index={1}>
+              {patient.transactions?.length === 0 ? (
+                <Box sx={{ py: 4, textAlign: 'center' }}><Typography color="text.secondary">Nema transakcija</Typography></Box>
+              ) : (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Datum</TableCell>
+                        <TableCell align="right">Iznos</TableCell>
+                        <TableCell>Tip</TableCell>
+                        <TableCell>Napomena</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </TabPanel>
+                    </TableHead>
+                    <TableBody>
+                      {patient.transactions?.map(t => (
+                        <TableRow key={t.id} hover>
+                          <TableCell>{format(new Date(t.createdAt), 'dd.MM.yyyy HH:mm')}</TableCell>
+                          <TableCell align="right">
+                            <Typography fontWeight={600} sx={{ color: t.type === 'REFUND' ? 'error.main' : 'success.main' }}>
+                              {t.type === 'REFUND' ? '-' : '+'}{formatCurrency(t.amount)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).label}
+                              size="small"
+                              color={(TRANSACTION_TYPE[t.type] ?? TRANSACTION_TYPE.PAYMENT).color}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">{t.note || '—'}</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </TabPanel>
+          )}
 
           {/* Military requests */}
           {patient.isMilitary && (
-            <TabPanel value={tab} index={2}>
+            <TabPanel value={tab} index={1}>
               {patient.militaryRequests?.length === 0 ? (
                 <Box sx={{ py: 4, textAlign: 'center' }}><Typography color="text.secondary">Nema vojnih zahteva</Typography></Box>
               ) : (
@@ -441,7 +445,10 @@ export default function DashboardPage() {
   const completed = todaySessions.filter(s => s.status === 'COMPLETED');
   const canceled = todaySessions.filter(s => s.status === 'CANCELED');
 
-  const displayName = user?.email?.split('@')[0] || '';
+  const displayName =
+    user?.therapist?.firstName && user?.therapist?.lastName
+      ? `${user.therapist.firstName} ${user.therapist.lastName}`
+      : user?.email?.split('@')[0] || '';
 
   return (
     <Box>

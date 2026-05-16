@@ -51,6 +51,7 @@ export const list = async (
           session: {
             include: {
               patient: { select: { firstName: true, lastName: true } },
+              room: { select: { name: true } },
             },
           },
           therapist: { select: { firstName: true, lastName: true } },

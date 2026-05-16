@@ -19,7 +19,7 @@ export const create = async (req: Request, res: Response, next: NextFunction): P
   } catch (err) { next(err); }
 };
 
-export const update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const update = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const room = await prisma.room.update({
       where: { id: parseInt(req.params.id) },
@@ -31,7 +31,7 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
   } catch (err) { next(err); }
 };
 
-export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const remove = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const id = parseInt(req.params.id);
     const sessionCount = await prisma.session.count({ where: { roomId: id } });

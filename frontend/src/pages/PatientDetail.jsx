@@ -191,7 +191,7 @@ export default function PatientDetailPage() {
                   <Typography
                     variant="h4"
                     fontWeight={700}
-                    color={patient.accountBalance > 0 ? 'success.main' : 'text.primary'}
+                    color={patient.accountBalance > 0 ? 'success.main' : patient.accountBalance < 0 ? 'error.main' : 'text.primary'}
                     sx={{ lineHeight: 1.1, mb: 1.5 }}
                   >
                     {formatCurrency(patient.accountBalance)}
@@ -222,7 +222,7 @@ export default function PatientDetailPage() {
                     color={patient.remainingSessions > 0 ? 'primary.main' : 'error.main'}
                     sx={{ lineHeight: 1.1 }}
                   >
-                    {patient.remainingSessions}
+                    {Math.max(0, patient.remainingSessions)}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                     Na osnovu stanja
@@ -283,13 +283,15 @@ export default function PatientDetailPage() {
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <InfoRow
-                  label="Logoped"
-                  value={patient.therapist ? `${patient.therapist.firstName} ${patient.therapist.lastName}` : null}
+                  label="Terapeut"
+                  value={patient.primaryTherapist ? `${patient.primaryTherapist.firstName} ${patient.primaryTherapist.lastName}` : 'Nije dodeljen'}
                 />
-                <InfoRow
-                  label="Cena tretmana"
-                  value={formatCurrency(patient.sessionPrice)}
-                />
+                {!patient.isMilitary && (
+                  <InfoRow
+                    label="Cena tretmana"
+                    value={formatCurrency(patient.sessionPrice)}
+                  />
+                )}
               </Box>
             </CardContent>
           </Card>
@@ -356,7 +358,7 @@ export default function PatientDetailPage() {
             scrollButtons="auto"
           >
             <Tab label={`Tretmani (${patient.sessions?.length || 0})`} />
-            <Tab label={`Transakcije (${patient.transactions?.length || 0})`} />
+            {!patient.isMilitary && <Tab label={`Transakcije (${patient.transactions?.length || 0})`} />}
             <Tab label={`Evaluacije (${patient.evaluations?.length || 0})`} />
             {patient.isMilitary && <Tab label={`Vojni zahtevi (${patient.militaryRequests?.length || 0})`} />}
           </Tabs>
@@ -376,11 +378,11 @@ export default function PatientDetailPage() {
                     <TableRow>
                       <TableCell>Datum</TableCell>
                       <TableCell>Vreme</TableCell>
-                      <TableCell>Logoped</TableCell>
+                      <TableCell>Terapeut</TableCell>
                       <TableCell>Prostorija</TableCell>
                       <TableCell>Trajanje</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell>Plaćeno</TableCell>
+                      {!patient.isMilitary && <TableCell>Plaćeno</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -399,14 +401,16 @@ export default function PatientDetailPage() {
                             variant="outlined"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={s.isPaid ? 'Da' : 'Ne'}
-                            size="small"
-                            color={s.isPaid ? 'success' : 'default'}
-                            variant="outlined"
-                          />
-                        </TableCell>
+                        {!patient.isMilitary && (
+                          <TableCell>
+                            <Chip
+                              label={s.isPaid ? 'Da' : 'Ne'}
+                              size="small"
+                              color={s.isPaid ? 'success' : 'default'}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -416,7 +420,8 @@ export default function PatientDetailPage() {
           </TabPanel>
 
           {/* Transactions tab */}
-          <TabPanel value={tab} index={1}>
+          {!patient.isMilitary && (
+            <TabPanel value={tab} index={1}>
             {['ADMIN', 'THERAPIST'].includes(user?.role) && (
               <Box sx={{ mb: 2 }}>
                 <Button
@@ -478,9 +483,10 @@ export default function PatientDetailPage() {
               </TableContainer>
             )}
           </TabPanel>
+          )}
 
           {/* Evaluations tab */}
-          <TabPanel value={tab} index={2}>
+          <TabPanel value={tab} index={patient.isMilitary ? 1 : 2}>
             {['ADMIN', 'THERAPIST'].includes(user?.role) && (
               <Box sx={{ mb: 2 }}>
                 <Button
@@ -541,7 +547,7 @@ export default function PatientDetailPage() {
 
           {/* Military requests tab */}
           {patient.isMilitary && (
-            <TabPanel value={tab} index={3}>
+            <TabPanel value={tab} index={2}>
               {patient.militaryRequests?.length === 0 ? (
                 <Box sx={{ py: 4, textAlign: 'center' }}>
                   <Typography color="text.secondary">Nema vojnih zahteva</Typography>

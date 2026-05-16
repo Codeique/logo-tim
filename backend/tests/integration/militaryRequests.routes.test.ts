@@ -1,8 +1,10 @@
 import request from 'supertest';
-import { Role, RequestStatus } from '@prisma/client';
+import { Role } from '@prisma/client';
 import prismaMock from '../__mocks__/prisma';
 import { buildTestApp } from '../__helpers__/app';
 import { makeMilitaryRequest } from '../__helpers__/factories';
+
+const RequestStatus = { ACTIVE: 'ACTIVE', EXPIRED: 'EXPIRED' } as const;
 
 jest.mock('../../src/middleware/auth', () => ({
   authenticate: jest.fn().mockImplementation((req, _res, next) => {

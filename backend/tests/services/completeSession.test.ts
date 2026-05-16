@@ -1,32 +1,42 @@
 import prismaMock from '../__mocks__/prisma';
 import { completeSession } from '../../src/modules/sessions/sessions.service';
 import { SessionStatus } from '@prisma/client';
-import { makeSession, makeTherapist, makePatient, makeFinance, decimal } from '../__helpers__/factories';
+import { makeSession, makeFinance, makePatient, decimal } from '../__helpers__/factories';
 
 beforeEach(() => {
   (prismaMock.$transaction as jest.Mock).mockImplementation(async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock));
 });
 
-const scheduledSession = makeSession({ status: SessionStatus.SCHEDULED });
-const completedSession = makeSession({ status: SessionStatus.COMPLETED });
-const therapist = makeTherapist({ hourlyRate: decimal(50) });
-const patient = makePatient({ sessionPrice: decimal(80), remainingSessions: 3, isMilitary: false });
+// The service fetches patient+therapist via include on session.findUniqueOrThrow,
+// not via separate patient/therapist queries. Mocks must embed the full objects.
+const patient = makePatient({ sessionPrice: decimal(80), accountBalance: decimal(0), remainingSessions: 3, isMilitary: false });
 const finance = makeFinance();
+
+const scheduledWithRelations = {
+  ...makeSession({ status: SessionStatus.SCHEDULED }),
+  patient,
+  therapist: { id: 1, hourlyRate: decimal(50) },
+};
+
+const completedWithRelations = {
+  ...makeSession({ status: SessionStatus.COMPLETED }),
+  patient,
+  therapist: { id: 1, hourlyRate: decimal(50) },
+};
 
 describe('completeSession — happy path (non-military)', () => {
   beforeEach(() => {
-    prismaMock.session.findUniqueOrThrow.mockResolvedValue(scheduledSession as any);
-    prismaMock.session.update.mockResolvedValue({ ...scheduledSession, status: SessionStatus.COMPLETED } as any);
-    prismaMock.therapist.findUniqueOrThrow.mockResolvedValue(therapist as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patient as any);
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(scheduledWithRelations as any);
+    prismaMock.session.update.mockResolvedValue({ ...scheduledWithRelations, status: SessionStatus.COMPLETED } as any);
     prismaMock.finance.upsert.mockResolvedValue(finance as any);
-    prismaMock.patient.update.mockResolvedValue({ ...patient, remainingSessions: 2 } as any);
+    // patient.update is called by adjustPatientBalance — must return object with Decimal fields
+    prismaMock.patient.update.mockResolvedValue({ ...patient } as any);
   });
 
   it('marks the session as COMPLETED', async () => {
     await completeSession(1);
     expect(prismaMock.session.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'COMPLETED' } }),
+      expect.objectContaining({ data: { status: 'COMPLETED', isPaid: false, balanceDeducted: false } }),
     );
   });
 
@@ -39,8 +49,7 @@ describe('completeSession — happy path (non-military)', () => {
     );
   });
 
-  it('calculates therapistEarning = hourlyRate * durationHours', async () => {
-    // hourlyRate=50, duration=60min → 50 * 1 = 50
+  it('therapistEarning = fixed hourlyRate regardless of duration', async () => {
     await completeSession(1);
     expect(prismaMock.finance.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -49,13 +58,43 @@ describe('completeSession — happy path (non-military)', () => {
     );
   });
 
-  it('decrements remainingSessions by 1 for non-military patient', async () => {
+  it('therapistEarning is unchanged when session duration is 45 minutes (not 60)', async () => {
+    const shortSession = {
+      ...makeSession({ status: SessionStatus.SCHEDULED, duration: 45 }),
+      patient,
+      therapist: { id: 1, hourlyRate: decimal(50) },
+    };
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(shortSession as any);
+    prismaMock.session.update.mockResolvedValue({ ...shortSession, status: SessionStatus.COMPLETED } as any);
+
     await completeSession(1);
-    expect(prismaMock.patient.update).toHaveBeenCalledWith(
+    expect(prismaMock.finance.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ remainingSessions: { decrement: 1 } }),
+        create: expect.objectContaining({ therapistEarning: 50 }),
       }),
     );
+  });
+
+  it('deducts sessionPrice from accountBalance when isPaid=true', async () => {
+    await completeSession(1, true);
+    expect(prismaMock.patient.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { accountBalance: { increment: -80 } },
+      }),
+    );
+  });
+
+  it('sets remainingSessions to 0 when balance goes negative after deduction', async () => {
+    // balance=0, deduct 80 → -80; max(0, floor(-80/80)) = 0
+    await completeSession(1, true);
+    expect(prismaMock.patient.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { remainingSessions: 0 } }),
+    );
+  });
+
+  it('does NOT adjust balance when isPaid=false', async () => {
+    await completeSession(1, false);
+    expect(prismaMock.patient.update).not.toHaveBeenCalled();
   });
 
   it('runs everything in a single $transaction', async () => {
@@ -72,32 +111,36 @@ describe('completeSession — happy path (non-military)', () => {
 });
 
 describe('completeSession — DI-01 (clamp remainingSessions to 0)', () => {
-  it('sets remainingSessions to 0 instead of decrementing when already 0', async () => {
-    const patientAtZero = { ...patient, remainingSessions: 0 };
-    prismaMock.session.findUniqueOrThrow.mockResolvedValue(scheduledSession as any);
-    prismaMock.session.update.mockResolvedValue({ ...scheduledSession, status: SessionStatus.COMPLETED } as any);
-    prismaMock.therapist.findUniqueOrThrow.mockResolvedValue(therapist as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(patientAtZero as any);
+  it('sets remainingSessions to 0 instead of going negative', async () => {
+    // Even with 0 remaining, balance deduction produces 0 (clamped), not negative
+    const patientAtZero = { ...patient, accountBalance: decimal(0), remainingSessions: 0 };
+    const sessionAtZero = {
+      ...makeSession({ status: SessionStatus.SCHEDULED }),
+      patient: patientAtZero,
+      therapist: { id: 1, hourlyRate: decimal(50) },
+    };
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(sessionAtZero as any);
+    prismaMock.session.update.mockResolvedValue({ ...sessionAtZero, status: SessionStatus.COMPLETED } as any);
     prismaMock.finance.upsert.mockResolvedValue(finance as any);
-    prismaMock.patient.update.mockResolvedValue(patientAtZero as any);
+    prismaMock.patient.update.mockResolvedValue({ ...patientAtZero } as any);
 
-    await completeSession(1);
+    await completeSession(1, true);
 
     expect(prismaMock.patient.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ remainingSessions: 0 }) }),
+      expect.objectContaining({ data: { remainingSessions: 0 } }),
     );
   });
 });
 
 describe('completeSession — DI-04 (double-completion guard)', () => {
   it('throws 409 if session is already COMPLETED', async () => {
-    prismaMock.session.findUniqueOrThrow.mockResolvedValue(completedSession as any);
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(completedWithRelations as any);
 
     await expect(completeSession(1)).rejects.toMatchObject({ statusCode: 409 });
   });
 
   it('does not create a Finance record on double-completion attempt', async () => {
-    prismaMock.session.findUniqueOrThrow.mockResolvedValue(completedSession as any);
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(completedWithRelations as any);
 
     await expect(completeSession(1)).rejects.toBeDefined();
     expect(prismaMock.finance.upsert).not.toHaveBeenCalled();
@@ -107,12 +150,15 @@ describe('completeSession — DI-04 (double-completion guard)', () => {
 describe('completeSession — military patient', () => {
   const militaryPatient = { ...patient, isMilitary: true };
   const activeRequest = { id: 5, patientId: 1, usedSessions: 1 };
+  const scheduledWithMilitaryPatient = {
+    ...makeSession({ status: SessionStatus.SCHEDULED }),
+    patient: militaryPatient,
+    therapist: { id: 1, hourlyRate: decimal(50) },
+  };
 
   beforeEach(() => {
-    prismaMock.session.findUniqueOrThrow.mockResolvedValue(scheduledSession as any);
-    prismaMock.session.update.mockResolvedValue({ ...scheduledSession, status: SessionStatus.COMPLETED } as any);
-    prismaMock.therapist.findUniqueOrThrow.mockResolvedValue(therapist as any);
-    prismaMock.patient.findUniqueOrThrow.mockResolvedValue(militaryPatient as any);
+    prismaMock.session.findUniqueOrThrow.mockResolvedValue(scheduledWithMilitaryPatient as any);
+    prismaMock.session.update.mockResolvedValue({ ...scheduledWithMilitaryPatient, status: SessionStatus.COMPLETED } as any);
     prismaMock.finance.upsert.mockResolvedValue(finance as any);
     prismaMock.militaryRequest.findFirst.mockResolvedValue(activeRequest as any);
     prismaMock.militaryRequest.update.mockResolvedValue({ ...activeRequest, usedSessions: 2 } as any);
@@ -125,7 +171,7 @@ describe('completeSession — military patient', () => {
     );
   });
 
-  it('does NOT call patient.update for remainingSessions on military patients', async () => {
+  it('does NOT call patient.update for balance on military patients', async () => {
     await completeSession(1);
     expect(prismaMock.patient.update).not.toHaveBeenCalled();
   });

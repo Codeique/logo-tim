@@ -117,42 +117,28 @@ function MilitaryStatusBox({ activeRequest }) {
 // --- State patient status box (centered, compact) ---
 function StatePatientStatusBox({ p, isAdmin }) {
   const remainingSessions = Number(p.sessionPrice) > 0
-    ? Math.floor(Number(p.accountBalance) / Number(p.sessionPrice))
-    : (p.remainingSessions ?? null);
-  const hasBalance = Number(p.accountBalance) > 0;
+    ? Math.max(0, Math.floor(Number(p.accountBalance) / Number(p.sessionPrice)))
+    : Math.max(0, p.remainingSessions ?? 0);
+  const rawBalance = Number(p.accountBalance);
+  const hasBalance = rawBalance > 0;
+  const isNegativeBalance = rawBalance < 0;
 
   if (isAdmin) {
+    const boxBg = hasBalance ? 'rgba(16,185,129,0.07)' : isNegativeBalance ? 'rgba(239,68,68,0.07)' : 'action.hover';
+    const boxBorder = hasBalance ? '1px solid rgba(16,185,129,0.2)' : isNegativeBalance ? '1px solid rgba(239,68,68,0.2)' : '1px solid transparent';
+    const balanceColor = hasBalance ? 'success.dark' : isNegativeBalance ? 'error.dark' : 'text.secondary';
+    const sessionsColor = hasBalance ? 'success.main' : 'text.disabled';
     return (
-      <Box sx={{
-        borderRadius: 1,
-        px: 1,
-        py: 0.875,
-        mb: 1.25,
-        textAlign: 'center',
-        bgcolor: hasBalance ? 'rgba(16,185,129,0.07)' : 'action.hover',
-        border: hasBalance ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-      }}>
+      <Box sx={{ borderRadius: 1, px: 1, py: 0.875, mb: 1.25, textAlign: 'center', bgcolor: boxBg, border: boxBorder }}>
         <Typography sx={{ fontSize: '0.63rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, display: 'block', mb: 0.2 }}>
           Stanje računa
         </Typography>
-        <Typography sx={{
-          fontSize: '0.92rem',
-          fontWeight: 800,
-          color: hasBalance ? 'success.dark' : 'text.secondary',
-          lineHeight: 1.2,
-        }}>
+        <Typography sx={{ fontSize: '0.92rem', fontWeight: 800, color: balanceColor, lineHeight: 1.2 }}>
           {formatCurrency(p.accountBalance, 0)}
         </Typography>
-        {remainingSessions !== null && (
-          <Typography sx={{
-            fontSize: '0.7rem',
-            fontWeight: 500,
-            color: hasBalance ? 'success.main' : 'text.disabled',
-            mt: 0.15,
-          }}>
-            ({remainingSessions} tretmana)
-          </Typography>
-        )}
+        <Typography sx={{ fontSize: '0.7rem', fontWeight: 500, color: sessionsColor, mt: 0.15 }}>
+          ({remainingSessions} tretmana)
+        </Typography>
       </Box>
     );
   }
@@ -219,10 +205,37 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
         },
       }}
     >
-      <CardContent sx={{ p: '16px !important', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ p: '16px !important', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
-        {/* Avatar + Age badge */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125, position: 'relative' }}>
+        {/* Age badge — anchored to top-right of the card */}
+        {age && (
+          <Box sx={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            bgcolor: p.isMilitary ? 'rgba(245,158,11,0.12)' : 'rgba(74,144,226,0.1)',
+            border: '1px solid',
+            borderColor: p.isMilitary ? 'rgba(245,158,11,0.35)' : 'rgba(74,144,226,0.25)',
+            borderRadius: '6px',
+            px: 0.75,
+            py: 0.15,
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}>
+            <Typography sx={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              color: p.isMilitary ? 'warning.dark' : 'primary.dark',
+              letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+            }}>
+              {age}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Avatar */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.125 }}>
           <Avatar sx={{
             width: 54,
             height: 54,
@@ -238,31 +251,6 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           }}>
             {initials}
           </Avatar>
-          {age && (
-            <Box sx={{
-              position: 'absolute',
-              top: -4,
-              right: '10%',
-              bgcolor: p.isMilitary ? 'rgba(245,158,11,0.12)' : 'rgba(74,144,226,0.1)',
-              border: '1px solid',
-              borderColor: p.isMilitary ? 'rgba(245,158,11,0.35)' : 'rgba(74,144,226,0.25)',
-              borderRadius: '6px',
-              px: 0.75,
-              py: 0.15,
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}>
-              <Typography sx={{
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                color: p.isMilitary ? 'warning.dark' : 'primary.dark',
-                letterSpacing: '0.02em',
-                whiteSpace: 'nowrap',
-              }}>
-                Godine: {age}
-              </Typography>
-            </Box>
-          )}
         </Box>
 
         {/* Full name */}
@@ -321,17 +309,17 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
             display: 'block',
             mb: 0.15,
           }}>
-            Logoped
+            Terapeut
           </Typography>
           <Typography sx={{
             fontSize: '0.775rem',
             fontWeight: 600,
-            color: p.therapist ? 'text.primary' : 'text.disabled',
+            color: p.primaryTherapist ? 'text.primary' : 'text.disabled',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>
-            {p.therapist ? `${p.therapist.firstName} ${p.therapist.lastName}` : 'Nije dodeljen'}
+            {p.primaryTherapist ? `${p.primaryTherapist.firstName} ${p.primaryTherapist.lastName}` : 'Nije dodeljen'}
           </Typography>
         </Box>
 
@@ -355,7 +343,7 @@ const PatientCard = memo(function PatientCard({ p, user, onEdit, onDelete, navig
           ) : (
             <Chip
               icon={<HealthAndSafety sx={{ fontSize: '12px !important' }} />}
-              label="Državni osiguranik"
+              label="Civil"
               size="small"
               sx={{
                 bgcolor: 'rgba(74,144,226,0.07)',
@@ -625,14 +613,14 @@ export default function PatientsPage() {
               />
             </Box>
             <Box>
-              <Typography variant="caption" sx={FILTER_LABEL_SX}>Logoped</Typography>
+              <Typography variant="caption" sx={FILTER_LABEL_SX}>Terapeut</Typography>
               <FormControl fullWidth size="small">
                 <Select
                   value={therapistFilter}
                   onChange={(e) => { setTherapistFilter(e.target.value); resetPage(); }}
                   displayEmpty
                 >
-                  <MenuItem value="">Svi logopedi</MenuItem>
+                  <MenuItem value="">Svi terapeuti</MenuItem>
                   {therapists.map(t => (
                     <MenuItem key={t.id} value={String(t.id)}>
                       {t.firstName} {t.lastName}

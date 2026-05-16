@@ -2,34 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation map
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` *(this file)* | Cross-cutting architecture, data flow, roles, key conventions |
+| [`backend/BACKEND.md`](backend/BACKEND.md) | Backend commands, module pattern, testing, caching, Prisma conventions |
+| [`frontend/FRONTEND.md`](frontend/FRONTEND.md) | Frontend commands, state management, routing, utils, testing |
+| [`README.md`](README.md) | Setup, environment variables, API reference, deployment |
+
 ## Project Overview
 
-LogoTim is a therapy center management system (speech therapy / logopedics). Fullstack monorepo: React 18 + Vite frontend, Node.js/Express backend, PostgreSQL via Prisma ORM, Socket.io for real-time updates.
+LogoTim is a therapy center management system (speech therapy / terapeutics). Fullstack monorepo: React 18 + Vite 8 frontend, Node.js 22 + Express 5 backend (TypeScript), PostgreSQL via Prisma ORM, Socket.io for real-time updates.
 
 ## Development Commands
 
 ### Backend (`cd backend`)
 ```bash
-npm run dev          # Start with tsx watch (hot reload, TypeScript)
-npm run build        # Compile TypeScript → dist/
-npm start            # Start compiled dist/index.js (production)
-npm run db:push      # Push schema changes to DB (no migration history)
-npm run db:migrate   # Create and apply a migration (use for production changes)
-npm run db:seed      # Seed demo data (node prisma/seed.js)
-npm run db:studio    # Open Prisma Studio GUI
+npm run dev          # tsx watch (hot reload, TypeScript)
+npm run build        # tsc → dist/
+npm test             # jest --runInBand
+npm run lint
+npm run db:push      # sync schema to DB (dev/Docker, no migration history)
+npm run db:migrate   # create + apply migration (use for prod / enum changes)
+npm run db:seed      # seed demo data
 ```
 
 ### Frontend (`cd frontend`)
 ```bash
-npm run dev          # Start Vite dev server at http://localhost:5173
-npm run build        # Production build
-npm run preview      # Preview production build
+npm run dev          # Vite dev server at http://localhost:5173
+npm run build        # production build
+npm run test:run     # vitest run (CI)
 ```
 
 ### Docker (DB only)
 ```bash
-docker-compose up -d          # Starts PostgreSQL 16 only; backend/frontend run locally
-docker-compose down
+docker-compose up -d   # starts PostgreSQL 16 only; backend/frontend run locally
 ```
 
 ### Environment Setup
@@ -40,79 +48,58 @@ cp .env.example backend/.env
 
 ## Architecture
 
-### Backend (`backend/src/`)
-TypeScript compiled to CommonJS (`"module": "commonjs"` in tsconfig), run with `tsx watch` in dev.
-
-- **`index.ts`** — Express app entry; middleware order: helmet → compression → cors → cookieParser → express.json → requestId → logging/metrics → rate limiters → routes → health/ready/metrics → errorHandler
-- **`socket.ts`** — Socket.io singleton; `emitEvent(event, data)` broadcasts to all connected clients
-- **`config/env.ts`** — Startup env validation + typed constants
-- **`middleware/auth.ts`** — `authenticate` (JWT Bearer) + `authorize(...roles)` (RBAC, 403 on failure)
-- **`middleware/audit.ts`** — Monkey-patches `res.json` to fire-and-forget `AuditLog` writes on 2xx; has 2 intentional casts — do not add more casts elsewhere
-- **`middleware/errorHandler.ts`** — Prisma error mapping: P2002→409, P2003→409, P2025→404; generic 500s
-- **`middleware/validate.ts`** — Runs `validationResult`, returns 422 with errors array
-- **`lib/roles.ts`** — `isTherapistRole(role)` matches both `THERAPIST` and `CHIEF_THERAPIST`; use this instead of any inline comparison
-- **`lib/pagination.ts`** — `parsePagination(query, maxLimit?)` → `{ skip, take, page, limit }`; guards page=0; use in all paginated list controllers
-- **`lib/profileCache.ts`** — LRU (5 min TTL, max 500): `getTherapistId(userId)` / `getPatientId(userId)` → profile ID; call invalidate functions after mutations
-- **`lib/listCache.ts`** — LRU (60s TTL): `getCachedRooms()` / `getCachedTherapists()`; call invalidate functions after mutations
-- **`types/express.d.ts`** — Augments `req.user: { id: number; role: Role }` and `req.requestId: string`
-
-### Backend Modules (`backend/src/modules/`)
-13 modules, each with `*.routes.ts` + `*.controller.ts`; write endpoints add `*.validation.ts`; complex logic adds `*.service.ts`.
-
-| Module | Key routes |
-|--------|-----------|
-| `auth` | POST /login, /refresh, /logout; GET /me |
-| `users` | GET /; POST /change-password |
-| `patients` | GET /, /me, /:id; POST /; PUT /:id; DELETE /:id; PATCH /:id/toggle-active |
-| `therapists` | GET /, /:id; POST /; PUT /:id; DELETE /:id |
-| `rooms` | GET /; POST /; PUT /:id; DELETE /:id |
-| `sessions` | GET /treatment-types, /, /:id; POST /; PUT /:id; DELETE /:id |
-| `transactions` | GET /; POST / |
-| `evaluations` | GET /; POST /; PUT /:id; DELETE /:id |
-| `militaryRequests` | GET /; POST /; PUT /:id; DELETE /:id |
-| `finance` | GET / |
-| `travelOrders` | GET /generate (PDF via PDFKit, rate-limited 5/min) |
-| `auditLogs` | GET / (ADMIN only) |
-
-### Frontend (`frontend/src/`)
-- **`api/axios.js`** — Axios instance, base `/api`, auto-attaches JWT from Zustand, auto-refreshes on 401
-- **`store/authStore.js`** — Zustand store persisted to `localStorage` as `auth-storage`; holds `{ user, accessToken }`
-- **`hooks/useSocket.js`** — Singleton Socket.io client; on each `*:updated` event calls `queryClient.invalidateQueries`
-- **`App.jsx`** — Route tree; `ProtectedRoute` checks `accessToken` + optional `roles` prop
-- **`pages/`** — One file per page; React Query for fetches, axios for mutations
-- **`components/`** — Shared dialogs: `SessionFormDialog`, `PatientFormDialog`, `TherapistFormDialog`, `MilitaryRequestDialog`, `AddTransactionDialog`, `AddEvaluationDialog`; plus `Layout`
-- **`theme.js`** — MUI theme factory; mode toggled via `localStorage` key `themeMode`
-
 ### Data Flow
-1. User action → React Query mutation → `api` axios → Express route
-2. Controller → Prisma → DB, then `emitEvent(event, data)` → Socket.io broadcast
-3. All clients → `useSocket` → `queryClient.invalidateQueries` → React Query refetches
+1. User action → React Query fetch / axios mutation → `/api` (Express route)
+2. Controller validates, writes via Prisma, then calls `emitEvent(event, data)` → Socket.io broadcast
+3. All connected clients → `useSocket` hook → `queryClient.invalidateQueries` → React Query refetches
 
 ### Auth Flow
-- Login returns `accessToken` (short-lived) + sets `refreshToken` as HttpOnly cookie
-- `accessToken` stored in Zustand; axios interceptor auto-refreshes on 401 before retrying
+- Login returns `accessToken` (15 min) + sets `refreshToken` as HttpOnly cookie (7 days)
+- `accessToken` stored in Zustand (memory only — not persisted); axios interceptor auto-refreshes on 401
+- On page load, `App.jsx` attempts `POST /api/auth/refresh` to restore session from the cookie
+- Refresh tokens are hashed (SHA-256) before storage in the `UserToken` table
+
+### Backend structure
+Express app entry is `backend/src/index.ts`. Middleware order: `helmet → compression → cors → cookieParser → express.json → requestId → HTTP logger/Prometheus → rate limiters → routes → health/ready/metrics → errorHandler`.
+
+Each module under `src/modules/<name>/` follows: `routes → controller → (service) → (validation)`. Modules: `auth`, `patients`, `therapists`, `rooms`, `sessions`, `transactions`, `evaluations`, `militaryRequests`, `finance`, `travelOrders`, `auditLogs`, `users`. See [`backend/BACKEND.md`](backend/BACKEND.md) for the full module reference, testing setup, and caching details.
+
+### Frontend structure
+React Router v6 with nested routes. `ProtectedRoute` checks `accessToken` + optional `roles` prop. Socket.io is a singleton connected once in `App.jsx` via `useSocket()`.
+
+See [`frontend/FRONTEND.md`](frontend/FRONTEND.md) for state management, React Query conventions, route-to-role mapping, and utility functions.
 
 ### Database Schema Key Points
 - `User` is the auth entity; `Therapist` and `Patient` are profiles linked 1:1 via `userId` (nullable — patients can exist without portal access)
-- `Session` links Patient + Therapist + optional Room; conflict-checking on create/update
+- `Session` links Patient + Therapist + optional Room; conflict-checking runs on create/update
 - `Finance` is one record per completed `Session` — tracks `therapistEarning` vs `companyIncome`
 - Military patients: `isMilitary: true` + `MilitaryRequest` records (session allowances with `validFrom`/`validUntil`)
 - `AuditLog` stores old/new JSON snapshots; `patients.controller.ts` writes it manually to capture `oldValue` before update
 
 ### Roles & Access
 - `ADMIN` — full access to everything
-- `THERAPIST` / `CHIEF_THERAPIST` — see all patients; calendar shows sessions in their assigned rooms (not just own sessions); finance shows own earnings only; no access to Transactions page
-- `PATIENT` — dashboard shows own profile only (PatientDashboard component in Dashboard.jsx); no other pages visible
+- `THERAPIST` / `CHIEF_THERAPIST` — see all patients; calendar shows sessions in their assigned rooms; finance shows own earnings only; no access to Transactions page
+- `PATIENT` — dashboard shows own profile only (`PatientDashboard` in `Dashboard.jsx`); no other pages
+
+Note: `/finance` route intentionally excludes `CHIEF_THERAPIST` from the frontend `ProtectedRoute` — therapists see only their own earnings via backend role filter.
 
 ## Key Conventions
-- Prisma `Decimal` fields (`hourlyRate`, `sessionPrice`, `accountBalance`) → use `.toNumber()`, not `parseFloat()`
-- Multi-step writes (session completion, payments) → `prisma.$transaction` in service files
-- Always call `emitEvent` after any write; event names: `patients:updated`, `sessions:updated`, `rooms:updated`, `therapists:updated`, `transactions:updated`, `evaluations:updated`, `militaryRequests:updated`, `finance:updated`
-- Role scoping: `isTherapistRole(req.user.role)` from `lib/roles.ts` — never `role === 'THERAPIST'` (misses CHIEF_THERAPIST); never the array form (TypeScript strict rejects it)
-- Route guards: `authorize(Role.ADMIN, Role.THERAPIST)` — Prisma enum preferred over string literals
-- `Transaction.type` is a `TransactionType` Prisma enum (PAYMENT | REFUND | ADJUSTMENT) — not a raw string
-- `MilitaryRequest.status` in DB is not authoritative — always compute via `computeStatus(validFrom, validUntil)` on read; never query the DB column directly
-- Rate limits: `/api/auth` 20 req/15min; `/api` 300 req/15min; `/api/travel-orders/generate` 5 req/min
-- Health endpoints: `GET /health` (liveness, no DB), `GET /ready` (DB ping), `GET /metrics` (Prometheus)
+
+### Backend
+- Prisma `Decimal` fields (`hourlyRate`, `sessionPrice`, `accountBalance`) → `.toNumber()`, never `parseFloat()`
+- Multi-step writes → `prisma.$transaction` in service files
+- `isTherapistRole(req.user.role)` from `lib/roles.ts` — never `role === 'THERAPIST'` (misses CHIEF_THERAPIST)
+- Route guards: `authorize(Role.ADMIN, Role.THERAPIST)` — use Prisma enum, not string literals
+- Always call `emitEvent` after any write — event names: `patients:updated`, `sessions:updated`, `rooms:updated`, `therapists:updated`, `transactions:updated`, `evaluations:updated`, `militaryRequests:updated`, `finance:updated`
+- `MilitaryRequest.status` is a virtual computed field (Prisma result extension in `lib/prisma.ts`) — never stored in or queried from the DB column
 - `db push` for dev/Docker; `prisma migrate dev` when migration history matters — enum changes require a migration before production deploy
-- `/patients/me` must be registered before `/:id` in routes.ts to prevent Express treating "me" as a numeric ID param
+- `/patients/me` must be registered before `/:id` in routes to prevent Express treating `"me"` as a numeric ID param
+- `PUT /patients/:id` writes the audit log manually (to capture `oldValue`); do NOT also attach the `auditLog` middleware to that route
+- **Express 5**: Controllers with `/:id` routes must type the request as `Request<{ id: string }>` — Express 5 tightened `req.params` from `any` to `string | string[]`
+- **ESLint v10**: Uses flat config (`eslint.config.js`) — `@typescript-eslint/no-empty-object-type` is disabled because `Request<{}, {}, Body>` is idiomatic Express; `@typescript-eslint/no-require-imports` is off for config files
+
+### Frontend
+- All reads use React Query; mutations use `api` (axios) directly and rely on Socket.io events for cache invalidation
+- Military request status for display: use `computeRequestStatus(validFrom, validUntil)` from `utils/militaryStatus.js` — not the API `status` field
+- Chip labels, colors, and role display: use constants from `utils/statusConfig.js` (`SESSION_STATUS`, `ROLE_CONFIG`, `TRANSACTION_TYPE`) — never hardcode Serbian strings inline
+- Currency formatting: `formatCurrency(value)` from `utils/currency.js` → Serbian RSD locale

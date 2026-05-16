@@ -6,14 +6,14 @@ export const SESSION_STATUS = {
 
 export const ROLE_CONFIG = {
   ADMIN:           { label: 'Admin',           color: '#7C3AED', bg: 'rgba(124,58,237,0.09)',  border: 'rgba(124,58,237,0.22)'  },
-  THERAPIST:       { label: 'Logoped',         color: '#0284C7', bg: 'rgba(2,132,199,0.09)',   border: 'rgba(2,132,199,0.22)'   },
+  THERAPIST:       { label: 'Terapeut',         color: '#0284C7', bg: 'rgba(2,132,199,0.09)',   border: 'rgba(2,132,199,0.22)'   },
   CHIEF_THERAPIST: { label: 'Glavni terapeut', color: '#0F766E', bg: 'rgba(15,118,110,0.09)',  border: 'rgba(15,118,110,0.22)'  },
   PATIENT:         { label: 'Pacijent',        color: '#64748B', bg: 'rgba(100,116,139,0.09)', border: 'rgba(100,116,139,0.22)' },
 };
 
 export const ROLE_OPTIONS = [
   { value: 'ADMIN',           label: 'Admin'           },
-  { value: 'THERAPIST',       label: 'Logoped'         },
+  { value: 'THERAPIST',       label: 'Terapeut'         },
   { value: 'CHIEF_THERAPIST', label: 'Glavni terapeut' },
 ];
 

@@ -62,15 +62,15 @@ function LogoIcon({ size = 72 }) {
 }
 
 /* ─── Login Form Panel ──────────────────────────────────────────────────────── */
-function LoginForm({ onSuccess }) {
+function LoginForm() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [form, setForm] = useState({ email: '', password: '' });
+  const [touched, setTouched] = useState({});
   const [showPass, setShowPass] = useState(false);
-  const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
 
   const mutation = useMutation({
@@ -84,20 +84,23 @@ function LoginForm({ onSuccess }) {
     },
   });
 
-  const validate = () => {
+  const validate = (f) => {
     const errs = {};
-    if (!form.email) errs.email = 'Email adresa je obavezna';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Unesite ispravnu email adresu';
-    if (!form.password) errs.password = 'Lozinka je obavezna';
+    if (!f.email) errs.email = 'Email adresa je obavezna.';
+    else if (!/\S+@\S+\.\S+/.test(f.email)) errs.email = 'Unesite ispravnu email adresu.';
+    if (!f.password) errs.password = 'Lozinka je obavezna.';
     return errs;
   };
 
+  const errors = validate(form);
+  const isValid = Object.keys(errors).length === 0;
+
+  const handleBlur = (field) => () => setTouched((t) => ({ ...t, [field]: true }));
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isValid) return;
     setApiError('');
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    setErrors({});
     mutation.mutate({ email: form.email, password: form.password });
   };
 
@@ -106,9 +109,7 @@ function LoginForm({ onSuccess }) {
   };
 
   const handleChange = (field) => (e) => {
-    const value = field === 'remember' ? e.target.checked : e.target.value;
-    setForm((f) => ({ ...f, [field]: value }));
-    if (errors[field]) setErrors((er) => ({ ...er, [field]: '' }));
+    setForm((f) => ({ ...f, [field]: e.target.value }));
   };
 
   return (
@@ -189,8 +190,9 @@ function LoginForm({ onSuccess }) {
             placeholder="Unesite vašu email adresu"
             value={form.email}
             onChange={handleChange('email')}
-            error={!!errors.email}
-            helperText={errors.email}
+            onBlur={handleBlur('email')}
+            error={!!(touched.email && errors.email)}
+            helperText={touched.email ? errors.email : ''}
             autoComplete="email"
             size="medium"
             InputProps={{
@@ -232,8 +234,9 @@ function LoginForm({ onSuccess }) {
             placeholder="Unesite lozinku"
             value={form.password}
             onChange={handleChange('password')}
-            error={!!errors.password}
-            helperText={errors.password}
+            onBlur={handleBlur('password')}
+            error={!!(touched.password && errors.password)}
+            helperText={touched.password ? errors.password : ''}
             autoComplete="current-password"
             size="medium"
             InputProps={{
@@ -280,7 +283,7 @@ function LoginForm({ onSuccess }) {
             variant="contained"
             fullWidth
             size="large"
-            disabled={mutation.isPending}
+            disabled={!isValid || mutation.isPending}
             sx={{
               py: 1.5,
               fontSize: '0.95rem',
@@ -334,7 +337,7 @@ function HeroPanel() {
         <Box
           component="img"
           src={loginImg}
-          alt="Logopedski centar"
+          alt="Terapeutski centar"
           sx={{
             position: 'absolute',
             inset: 0,
@@ -393,7 +396,7 @@ function HeroPanel() {
                   lineHeight: 1.6,
                 }}
               >
-                Profesionalna logopedska pomoć za sve uzraste
+                Profesionalna terapeutska pomoć za sve uzraste
               </Typography>
             </Box>
           </Slide>
@@ -475,7 +478,7 @@ export default function LoginPage() {
                 textShadow: '0 1px 6px rgba(0,0,0,0.25)',
               }}
             >
-              Profesionalna logopedska pomoć za sve uzraste
+              Profesionalna terapeutska pomoć za sve uzraste
             </Typography>
           </Box>
 
@@ -532,4 +535,3 @@ export default function LoginPage() {
     </ThemeProvider>
   );
 }
-

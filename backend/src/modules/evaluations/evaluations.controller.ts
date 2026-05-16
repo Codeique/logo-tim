@@ -34,7 +34,7 @@ export const list = async (req: Request<{}, {}, {}, EvaluationQuery>, res: Respo
     // SEC-05: scope THERAPIST/CHIEF_THERAPIST to their own patients' evaluations
     if (isTherapistRole(req.user.role)) {
       const tId = await getTherapistId(req.user.id);
-      if (tId) where.patient = { therapistId: tId };
+      if (tId) where.patient = { primaryTherapistId: tId };
     }
 
     const [evaluations, total] = await Promise.all([
@@ -59,9 +59,9 @@ export const create = async (req: Request<{}, {}, EvaluationCreateBody>, res: Re
     if (isTherapistRole(req.user.role)) {
       const [tId, patient] = await Promise.all([
         getTherapistId(req.user.id),
-        prisma.patient.findUnique({ where: { id: parseInt(String(patientId)) }, select: { therapistId: true } }),
+        prisma.patient.findUnique({ where: { id: parseInt(String(patientId)) }, select: { primaryTherapistId: true } }),
       ]);
-      if (!tId || !patient || patient.therapistId !== tId) {
+      if (!tId || !patient || patient.primaryTherapistId !== tId) {
         res.status(403).json({ message: 'Forbidden' }); return;
       }
     }
@@ -90,10 +90,10 @@ export const update = async (req: Request<{ id: string }, {}, EvaluationUpdateBo
         getTherapistId(req.user.id),
         prisma.evaluation.findUnique({
           where: { id: parseInt(req.params.id) },
-          select: { patient: { select: { therapistId: true } } },
+          select: { patient: { select: { primaryTherapistId: true } } },
         }),
       ]);
-      if (!tId || !existing || existing.patient.therapistId !== tId) {
+      if (!tId || !existing || existing.patient.primaryTherapistId !== tId) {
         res.status(403).json({ message: 'Forbidden' }); return;
       }
     }
@@ -111,7 +111,7 @@ export const update = async (req: Request<{ id: string }, {}, EvaluationUpdateBo
   } catch (err) { next(err); }
 };
 
-export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const remove = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     await prisma.evaluation.delete({ where: { id: parseInt(req.params.id) } });
     emitEvent('evaluations:updated', { action: 'deleted', id: parseInt(req.params.id) });

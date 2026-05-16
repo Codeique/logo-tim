@@ -70,16 +70,16 @@ async function main() {
   const p1User = await prisma.user.create({ data: { email: 'patient@test.com', password: await hash('123456'), role: 'PATIENT' } });
 
   const patientData = [
-    { firstName: 'Luka', lastName: 'Babić', nickname: 'Luky', phone: '061-111-111', diagnosis: 'Mucanje', sessionPrice: 50, therapistId: t1.id, userId: p1User.id },
-    { firstName: 'Sara', lastName: 'Novak', nickname: 'Sari', phone: '061-222-222', diagnosis: 'Dislalija', sessionPrice: 50, therapistId: t1.id },
-    { firstName: 'Petar', lastName: 'Jurić', phone: '062-333-333', diagnosis: 'Afazija', sessionPrice: 60, therapistId: t2.id },
-    { firstName: 'Mia', lastName: 'Tomić', phone: '063-444-444', diagnosis: 'Mucanje', sessionPrice: 50, therapistId: t2.id },
-    { firstName: 'Nikola', lastName: 'Đukić', phone: '064-555-555', diagnosis: 'Disfonija', sessionPrice: 55, therapistId: t2.id, isMilitary: true, nationalId: '0101990123456', insuranceHolder: 'Ministarstvo odbrane', medicalFileNumber: 'MED-2024-001', militaryPost: 'VP 1234' },
-    { firstName: 'Maja', lastName: 'Stanić', phone: '065-666-666', diagnosis: 'Disleksija', sessionPrice: 55, therapistId: t3.id, isMilitary: true, nationalId: '0505985654321', insuranceHolder: 'Ministarstvo odbrane', medicalFileNumber: 'MED-2024-002', militaryPost: 'VP 5678' },
-    { firstName: 'Ivan', lastName: 'Marić', phone: '061-777-777', diagnosis: 'Mucanje', sessionPrice: 50, therapistId: t3.id },
-    { firstName: 'Ela', lastName: 'Puljić', phone: '062-888-888', diagnosis: 'Dislalija', sessionPrice: 50, therapistId: t1.id },
-    { firstName: 'Tin', lastName: 'Bošnjak', phone: '063-999-999', diagnosis: 'Afazija', sessionPrice: 60, therapistId: t2.id },
-    { firstName: 'Zara', lastName: 'Kovačević', phone: '064-000-000', diagnosis: 'Disfonija', sessionPrice: 55, therapistId: t3.id },
+    { firstName: 'Luka', lastName: 'Babić', nickname: 'Luky', phone: '061-111-111', diagnosis: 'Mucanje', sessionPrice: 50, primaryTherapistId: t1.id, userId: p1User.id },
+    { firstName: 'Sara', lastName: 'Novak', nickname: 'Sari', phone: '061-222-222', diagnosis: 'Dislalija', sessionPrice: 50, primaryTherapistId: t1.id },
+    { firstName: 'Petar', lastName: 'Jurić', phone: '062-333-333', diagnosis: 'Afazija', sessionPrice: 60, primaryTherapistId: t2.id },
+    { firstName: 'Mia', lastName: 'Tomić', phone: '063-444-444', diagnosis: 'Mucanje', sessionPrice: 50, primaryTherapistId: t2.id },
+    { firstName: 'Nikola', lastName: 'Đukić', phone: '064-555-555', diagnosis: 'Disfonija', sessionPrice: 55, primaryTherapistId: t2.id, isMilitary: true, nationalId: '0101990123456', insuranceHolder: 'Ministarstvo odbrane', medicalFileNumber: 'MED-2024-001', militaryPost: 'VP 1234' },
+    { firstName: 'Maja', lastName: 'Stanić', phone: '065-666-666', diagnosis: 'Disleksija', sessionPrice: 55, primaryTherapistId: t3.id, isMilitary: true, nationalId: '0505985654321', insuranceHolder: 'Ministarstvo odbrane', medicalFileNumber: 'MED-2024-002', militaryPost: 'VP 5678' },
+    { firstName: 'Ivan', lastName: 'Marić', phone: '061-777-777', diagnosis: 'Mucanje', sessionPrice: 50, primaryTherapistId: t3.id },
+    { firstName: 'Ela', lastName: 'Puljić', phone: '062-888-888', diagnosis: 'Dislalija', sessionPrice: 50, primaryTherapistId: t1.id },
+    { firstName: 'Tin', lastName: 'Bošnjak', phone: '063-999-999', diagnosis: 'Afazija', sessionPrice: 60, primaryTherapistId: t2.id },
+    { firstName: 'Zara', lastName: 'Kovačević', phone: '064-000-000', diagnosis: 'Disfonija', sessionPrice: 55, primaryTherapistId: t3.id },
   ];
 
   const patients = [];
@@ -101,7 +101,6 @@ async function main() {
       data: {
         patientId: mp.id,
         requestNumber: `#${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99) + 1).padStart(2, '0')}`,
-        status: 'ACTIVE',
         totalSessions: 20,
         usedSessions: 8,
         validFrom: new Date('2026-01-01'),
@@ -139,7 +138,7 @@ async function main() {
       date: d,
       startTime: `${String(hour).padStart(2, '0')}:00`,
       duration: 45,
-      treatmentType: 'Logopedska terapija',
+      treatmentType: 'Terapeutska terapija',
       status: i < 15 ? 'COMPLETED' : i < 20 ? 'SCHEDULED' : 'CANCELED',
       isPaid: i < 10,
     });
@@ -150,9 +149,8 @@ async function main() {
     if (session.status === 'COMPLETED') {
       const therapist = therapists.find(t => t.id === session.therapistId);
       const patient = patients.find(p => p.id === session.patientId);
-      const durationHours = session.duration / 60;
-      const therapistEarning = parseFloat(therapist.hourlyRate) * durationHours;
-      const companyIncome = parseFloat(patient.sessionPrice) - therapistEarning;
+      const therapistEarning = parseFloat(therapist.hourlyRate);
+      const companyIncome = Math.max(parseFloat(patient.sessionPrice) - therapistEarning, 0);
       await prisma.finance.create({
         data: {
           sessionId: session.id,

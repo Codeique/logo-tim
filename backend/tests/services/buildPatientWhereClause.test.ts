@@ -13,9 +13,9 @@ beforeEach(() => {
 describe('buildPatientWhereClause — ADMIN', () => {
   const admin = { id: 1, role: Role.ADMIN };
 
-  it('returns empty where clause (sees all patients)', async () => {
+  it('returns only deletedAt filter (sees all non-deleted patients)', async () => {
     const where = await buildPatientWhereClause(admin, {});
-    expect(where).toEqual({});
+    expect(where).toEqual({ deletedAt: null });
   });
 
   it('adds search OR clause when search is provided', async () => {
@@ -26,7 +26,7 @@ describe('buildPatientWhereClause — ADMIN', () => {
 
   it('adds therapistId filter when provided', async () => {
     const where = await buildPatientWhereClause(admin, { therapistId: '3' });
-    expect(where.therapistId).toBe(3);
+    expect(where.primaryTherapistId).toBe(3);
   });
 
   it('adds isMilitary filter', async () => {
