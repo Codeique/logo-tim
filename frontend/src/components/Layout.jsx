@@ -53,29 +53,25 @@ export default function Layout({ onToggleTheme, mode }) {
       flexDirection: 'column',
       bgcolor: 'background.paper',
     }}>
-      {/* Logo */}
-      <Box sx={{ p: 2.5, pb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{
-          width: 38, height: 38, borderRadius: 1,
-          background: 'linear-gradient(135deg, #4A90E2 0%, #3680C8 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, boxShadow: '0 4px 12px rgba(74,144,226,0.35)',
-        }}>
-          <Typography sx={{ color: 'white', fontWeight: 800, fontSize: 13, letterSpacing: '-0.5px' }}>LT</Typography>
+      {/* On mobile, a spacer aligns drawer content below the fixed AppBar.
+          On desktop, the full logo header is shown inside the sidebar. */}
+      {isMobile ? (
+        <Toolbar sx={{ minHeight: '56px !important', flexShrink: 0 }} />
+      ) : (
+        <Box sx={{ p: 2.5, pb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            width: 38, height: 38, borderRadius: 1,
+            background: 'linear-gradient(135deg, #4A90E2 0%, #3680C8 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, boxShadow: '0 4px 12px rgba(74,144,226,0.35)',
+          }}>
+            <Typography sx={{ color: 'white', fontWeight: 800, fontSize: 13, letterSpacing: '-0.5px' }}>LT</Typography>
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.4px' }}>
+            LogoTim
+          </Typography>
         </Box>
-        <Typography variant="h6" sx={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.4px' }}>
-          LogoTim
-        </Typography>
-        {isMobile && (
-          <IconButton
-            size="small"
-            sx={{ ml: 'auto', color: 'text.secondary' }}
-            onClick={() => setDrawerOpen(false)}
-          >
-            ✕
-          </IconButton>
-        )}
-      </Box>
+      )}
 
       <Divider sx={{ borderColor: 'divider' }} />
 
