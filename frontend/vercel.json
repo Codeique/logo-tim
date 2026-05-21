@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE_WITH_RAILWAY_URL/api/:path*"
+      "destination": "https://logo-tim-production.up.railway.app/api/:path*"
     }
   ]
 }
