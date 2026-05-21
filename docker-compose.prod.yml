@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: logotim-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - logotim-net
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: logotim-certbot
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    # Run manually for first issuance:
+    #   docker compose -f docker-compose.prod.yml run --rm certbot certonly \
+    #     --webroot --webroot-path=/var/www/certbot \
+    #     --email you@example.com --agree-tos --no-eff-email \
+    #     -d your-domain.com
+    # Renewal is handled by cron on the host (see scripts/renew-certs.sh)
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - logotim-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: logotim-frontend
+    restart: unless-stopped
+    networks:
+      - logotim-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: logotim-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/logotim
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
+      INTERNAL_ONLY: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "node_modules/.bin/prisma migrate deploy && node dist/index.js"
+    networks:
+      - logotim-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: logotim-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: logotim
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - logotim-net
+
+networks:
+  logotim-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  certbot-conf:
+  certbot-www:

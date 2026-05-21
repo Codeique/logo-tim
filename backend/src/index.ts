@@ -1,7 +1,7 @@
 import './config/env'; // Must be first — validates env vars before anything else loads
 
 import { randomUUID } from 'crypto';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -73,6 +73,14 @@ app.use((req, res, next) => {
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 
+// Restrict /ready and /metrics to internal network when INTERNAL_ONLY=true
+const internalOnly = (req: Request, res: Response, next: NextFunction) => {
+  if (!env.INTERNAL_ONLY) return next();
+  const ip = req.ip ?? '';
+  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('::ffff:127.') || ip.startsWith('172.') || ip.startsWith('10.')) return next();
+  res.status(403).json({ message: 'Forbidden' });
+};
+
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api', apiLimiter);
 app.use('/api/users', userRoutes);
@@ -92,8 +100,8 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// MON-01: readiness — DB check + uptime; should be restricted to internal access in production
-app.get('/ready', async (_req, res) => {
+// MON-01: readiness — DB check + uptime; restricted to internal network when INTERNAL_ONLY=true
+app.get('/ready', internalOnly, async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', db: 'ok', uptime: process.uptime() });
@@ -102,8 +110,8 @@ app.get('/ready', async (_req, res) => {
   }
 });
 
-// MON-02: Prometheus metrics endpoint
-app.get('/metrics', async (_req, res) => {
+// MON-02: Prometheus metrics endpoint; restricted to internal network when INTERNAL_ONLY=true
+app.get('/metrics', internalOnly, async (_req, res) => {
   res.set('Content-Type', client.register.contentType);
   res.send(await client.register.metrics());
 });

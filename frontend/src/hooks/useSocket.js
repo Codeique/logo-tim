@@ -7,7 +7,8 @@ let socket = null;
 
 const getSocket = () => {
   if (!socket) {
-    socket = io('/', { path: '/socket.io', transports: ['websocket'] });
+    const backendUrl = import.meta.env.VITE_BACKEND_URL ?? '/';
+    socket = io(backendUrl, { path: '/socket.io', transports: ['websocket'] });
   }
   return socket;
 };

@@ -16,6 +16,7 @@ const env = {
   JWT_SECRET:         process.env.JWT_SECRET as string,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET as string,
   LOG_LEVEL:          process.env.LOG_LEVEL || 'info',
+  INTERNAL_ONLY:      process.env.INTERNAL_ONLY === 'true',
 } as const;
 
 export = env;

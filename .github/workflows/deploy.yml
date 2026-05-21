@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.VPS_PATH }}
+
+            # Pull latest code
+            git pull origin main
+
+            # Rebuild only changed services (backend + frontend)
+            docker compose -f docker-compose.prod.yml build backend frontend
+
+            # Restart with zero-downtime (db and nginx keep running)
+            docker compose -f docker-compose.prod.yml up -d --no-deps backend frontend
+
+            # Run any pending Prisma migrations
+            docker compose -f docker-compose.prod.yml exec -T backend \
+              node_modules/.bin/prisma migrate deploy
+
+            # Remove dangling images to reclaim disk space
+            docker image prune -f

@@ -7,7 +7,7 @@ import env from '../../config/env';
 
 type LoginBody = { email: string; password: string };
 
-const REFRESH_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
