@@ -9,6 +9,7 @@ RUN npm run build
 
 FROM node:22-alpine AS final
 WORKDIR /app
+RUN apk add --no-cache openssl
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
