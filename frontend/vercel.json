@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --no-package-lock --force",
+  "installCommand": "npm install --no-package-lock",
   "rewrites": [
     {
       "source": "/api/:path*",
