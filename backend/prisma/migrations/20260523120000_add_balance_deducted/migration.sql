@@ -1,0 +1,1 @@
+ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "balanceDeducted" BOOLEAN NOT NULL DEFAULT false;
